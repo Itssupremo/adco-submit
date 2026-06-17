@@ -4,7 +4,10 @@
   "private": true,
   "scripts": {
     "install:all": "cd backend && npm install && cd ../frontend && npm install",
-    "build": "cd frontend && npm run build"
+    "build": "npm --prefix frontend install --include=dev && npm --prefix frontend run build"
+  },
+  "engines": {
+    "node": "22.x"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
