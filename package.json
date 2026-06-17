@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "install:all": "cd backend && npm install && cd ../frontend && npm install",
-    "build": "npm --prefix frontend install --include=dev && npm --prefix frontend run build"
+    "build": "npm --prefix frontend install --include=dev && npm --prefix frontend run build",
+    "start": "npm --prefix backend start"
   },
   "engines": {
     "node": "22.x"
