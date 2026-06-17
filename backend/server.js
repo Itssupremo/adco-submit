@@ -66,8 +66,7 @@ const connectDB = async () => {
   console.log('MongoDB connected');
 };
 
-// For local development
-if (process.env.NODE_ENV !== 'production') {
+const startServer = async () => {
   const PORT = process.env.PORT || 5000;
   connectDB().then(() => {
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
@@ -75,6 +74,12 @@ if (process.env.NODE_ENV !== 'production') {
     console.error('MongoDB connection error:', err.message);
     process.exit(1);
   });
+};
+
+// Start server only when this file is executed directly (DigitalOcean/local).
+// When required by serverless runtimes (e.g., Vercel), it only exports the app.
+if (require.main === module) {
+  startServer();
 }
 
 // Export for Vercel serverless
