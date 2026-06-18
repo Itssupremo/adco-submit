@@ -44,7 +44,15 @@ app.use(
     optionsSuccessStatus: 204,
   })
 );
+// Preserve pre-parsed body in serverless/hosted environments (like Vercel / DigitalOcean Functions)
+app.use((req, res, next) => {
+  if (req.body && typeof req.body === 'object' && Object.keys(req.body).length > 0) {
+    req._body = true;
+  }
+  next();
+});
 app.use(express.json());
+
 
 // Routes
 app.use('/api/auth', authRoutes);
