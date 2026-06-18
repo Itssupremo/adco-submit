@@ -139,37 +139,41 @@ function buildSucUsers(rows) {
   }).filter(Boolean);
 }
 
-// ── Seed ──────────────────────────────────────────────────────────────────────
+// ── Seed Data Logic ───────────────────────────────────────────────────────────
+async function seedData() {
+  await User.deleteMany({});
+  await Suc.deleteMany({});
+
+  // Insert fixed accounts
+  await User.create(FIXED_USERS);
+  console.log('=== Fixed Accounts ===');
+  FIXED_USERS.forEach((u) => {
+    const tag = u.role === 'superadmin' ? '[SUPERADMIN]' : '[ADMIN]';
+    console.log(`${tag}  ${u.fullname.padEnd(42)} username: ${u.username.padEnd(15)} email: ${u.email}`);
+  });
+
+  // Insert SUCs + SUC user accounts
+  const sucs = loadSucsFromXlsx();
+  await Suc.insertMany(sucs);
+
+  const sucUsers = buildSucUsers(sucs);
+  await User.create(sucUsers);
+
+  console.log(`\n=== SUC User Accounts (${sucUsers.length}) ===`);
+  console.log('Role: user  |  password = abbreviation (original)');
+  sucUsers.forEach((u) => {
+    console.log(`[USER]  ${u.fullname.slice(0, 48).padEnd(50)} username: ${u.username.padEnd(15)} pwd: ${u.password}`);
+  });
+
+  console.log(`\nSeeding complete: ${FIXED_USERS.length} fixed + ${sucUsers.length} SUC accounts | ${sucs.length} SUCs`);
+}
+
+// ── Seed Standalone Command ──────────────────────────────────────────────────
 async function seed() {
   try {
     await mongoose.connect(process.env.MONGO_URI);
     console.log('MongoDB connected for seeding\n');
-
-    await User.deleteMany({});
-    await Suc.deleteMany({});
-
-    // Insert fixed accounts
-    await User.create(FIXED_USERS);
-    console.log('=== Fixed Accounts ===');
-    FIXED_USERS.forEach((u) => {
-      const tag = u.role === 'superadmin' ? '[SUPERADMIN]' : '[ADMIN]';
-      console.log(`${tag}  ${u.fullname.padEnd(42)} username: ${u.username.padEnd(15)} email: ${u.email}`);
-    });
-
-    // Insert SUCs + SUC user accounts
-    const sucs = loadSucsFromXlsx();
-    await Suc.insertMany(sucs);
-
-    const sucUsers = buildSucUsers(sucs);
-    await User.create(sucUsers);
-
-    console.log(`\n=== SUC User Accounts (${sucUsers.length}) ===`);
-    console.log('Role: user  |  password = abbreviation (original)');
-    sucUsers.forEach((u) => {
-      console.log(`[USER]  ${u.fullname.slice(0, 48).padEnd(50)} username: ${u.username.padEnd(15)} pwd: ${u.password}`);
-    });
-
-    console.log(`\nSeeding complete: ${FIXED_USERS.length} fixed + ${sucUsers.length} SUC accounts | ${sucs.length} SUCs`);
+    await seedData();
     process.exit(0);
   } catch (err) {
     console.error('Seeding error:', err.message);
@@ -177,4 +181,9 @@ async function seed() {
   }
 }
 
-seed();
+if (require.main === module) {
+  seed();
+}
+
+module.exports = { seedData };
+

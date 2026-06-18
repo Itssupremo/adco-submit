@@ -9,6 +9,7 @@ const agendaRoutes              = require('./routes/agendaRoutes');
 const documentRoutes            = require('./routes/documentRoutes');
 const dateBoardMeetingRoutes    = require('./routes/dateBoardMeetingRoutes');
 const cors = require('cors');
+const { seedData } = require('./seed');
 
 const app = express();
 
@@ -64,6 +65,19 @@ const connectDB = async () => {
   await mongoose.connect(process.env.MONGO_URI);
   isConnected = true;
   console.log('MongoDB connected');
+
+  // Check if database needs auto-seeding
+  try {
+    const User = require('./models/User');
+    const userCount = await User.countDocuments({});
+    if (userCount === 0) {
+      console.log('No users found in database. Running auto-seeding...');
+      await seedData();
+      console.log('Auto-seeding completed successfully.');
+    }
+  } catch (err) {
+    console.error('Error during auto-seeding check:', err.message);
+  }
 };
 
 const startServer = async () => {
