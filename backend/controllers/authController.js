@@ -1,6 +1,8 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 const generateToken = (user) => {
   return jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
     expiresIn: '7d'
@@ -10,14 +12,17 @@ const generateToken = (user) => {
 exports.login = async (req, res) => {
   try {
     const { username, email, password } = req.body;
-    if (!password || (!username && !email)) {
+    const normalizedEmail = typeof email === 'string' ? email.toLowerCase().trim() : '';
+    const normalizedUsername = typeof username === 'string' ? username.trim() : '';
+
+    if (!password || (!normalizedUsername && !normalizedEmail)) {
       return res.status(400).json({ message: 'Credentials are required' });
     }
     let user;
-    if (email) {
-      user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (normalizedEmail) {
+      user = await User.findOne({ email: normalizedEmail });
     } else {
-      user = await User.findOne({ username });
+      user = await User.findOne({ username: new RegExp(`^${escapeRegex(normalizedUsername)}$`, 'i') });
     }
     if (!user) return res.status(401).json({ message: 'Invalid credentials' });
 

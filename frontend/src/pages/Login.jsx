@@ -78,7 +78,10 @@ function Login({ onLogin }) {
     setError('');
     setLoading(true);
     try {
-      const res = await loginApi({ username, password });
+      const formData = new FormData(e.currentTarget);
+      const submittedUsername = (formData.get('username') || username || '').toString().trim();
+      const submittedPassword = (formData.get('password') || password || '').toString();
+      const res = await loginApi({ username: submittedUsername, password: submittedPassword });
       onLogin(res.data.user, res.data.token);
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid credentials.');
@@ -405,6 +408,7 @@ function Login({ onLogin }) {
                   </span>
                   <input
                     type="text"
+                    name="username"
                     style={{
                       fontFamily: font,
                       width: '100%',
@@ -426,6 +430,7 @@ function Login({ onLogin }) {
                     onFocus={() => setFocusUser(true)}
                     onBlur={() => setFocusUser(false)}
                     required
+                    autoComplete="username"
                     autoFocus
                   />
                 </div>
@@ -450,6 +455,7 @@ function Login({ onLogin }) {
                   </span>
                   <input
                     type={showPass ? 'text' : 'password'}
+                    name="password"
                     style={{
                       fontFamily: font,
                       width: '100%',
@@ -471,6 +477,7 @@ function Login({ onLogin }) {
                     onFocus={() => setFocusPass(true)}
                     onBlur={() => setFocusPass(false)}
                     required
+                    autoComplete="current-password"
                   />
                   <button
                     type="button"
