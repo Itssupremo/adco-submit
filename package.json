@@ -4,8 +4,11 @@
   "private": true,
   "scripts": {
     "install:all": "cd backend && npm install && cd ../frontend && npm install",
+    "prebuild": "npm run docs:generate",
     "build": "npm --prefix frontend install --include=dev && npm --prefix frontend run build",
-    "start": "npm --prefix backend start"
+    "start": "npm --prefix backend start",
+    "docs:generate": "node scripts/generate-docs.js",
+    "docs:watch": "node scripts/generate-docs.js --watch"
   },
   "engines": {
     "node": "22.x"

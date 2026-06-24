@@ -23,6 +23,8 @@ const safe = (doc) => {
   const obj = doc.toObject();
   if (obj.oldAgenda) delete obj.oldAgenda.data;
   if (obj.newAgenda) delete obj.newAgenda.data;
+  if (obj.oldAgendaHistory) obj.oldAgendaHistory.forEach((v) => delete v.data);
+  if (obj.newAgendaHistory) obj.newAgendaHistory.forEach((v) => delete v.data);
   return obj;
 };
 
@@ -32,7 +34,8 @@ exports.getAgendas = async (req, res) => {
   try {
     const { sucId, year } = req.query;
     if (!sucId || !year) return res.status(400).json({ message: 'sucId and year are required' });
-    const docs = await Agenda.find({ sucId, year: parseInt(year) }).select('-oldAgenda.data -newAgenda.data');
+    const docs = await Agenda.find({ sucId, year: parseInt(year) })
+      .select('-oldAgenda.data -newAgenda.data -oldAgendaHistory.data -newAgendaHistory.data');
     res.json(docs);
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
@@ -54,8 +57,9 @@ exports.uploadFiles = async (req, res) => {
 
     if (req.files?.oldAgenda?.[0]) {
       const f = req.files.oldAgenda[0];
-      if (doc.oldAgenda?.s3Key) {
-        await deleteFromS3(doc.oldAgenda.s3Key);
+      // Archive current version to history (do NOT delete S3 file)
+      if (doc.oldAgenda?.filename) {
+        doc.oldAgendaHistory.push({ ...doc.oldAgenda.toObject() });
       }
       const s3Key = await uploadToS3(f.originalname, f.buffer, f.mimetype);
       doc.oldAgenda = {
@@ -63,13 +67,15 @@ exports.uploadFiles = async (req, res) => {
         data: s3Key ? undefined : f.buffer,
         s3Key: s3Key || undefined,
         contentType: f.mimetype,
-        uploadedAt: new Date()
+        uploadedAt: new Date(),
+        version: (doc.oldAgenda?.version || 0) + 1,
       };
     }
     if (req.files?.newAgenda?.[0]) {
       const f = req.files.newAgenda[0];
-      if (doc.newAgenda?.s3Key) {
-        await deleteFromS3(doc.newAgenda.s3Key);
+      // Archive current version to history (do NOT delete S3 file)
+      if (doc.newAgenda?.filename) {
+        doc.newAgendaHistory.push({ ...doc.newAgenda.toObject() });
       }
       const s3Key = await uploadToS3(f.originalname, f.buffer, f.mimetype);
       doc.newAgenda = {
@@ -77,7 +83,8 @@ exports.uploadFiles = async (req, res) => {
         data: s3Key ? undefined : f.buffer,
         s3Key: s3Key || undefined,
         contentType: f.mimetype,
-        uploadedAt: new Date()
+        uploadedAt: new Date(),
+        version: (doc.newAgenda?.version || 0) + 1,
       };
     }
 
@@ -89,7 +96,7 @@ exports.uploadFiles = async (req, res) => {
 };
 
 // DELETE /api/agendas/:sucId/:quarter?year=
-// Clears both files for a quarter
+// Clears both files and full history for a quarter
 exports.resetFiles = async (req, res) => {
   try {
     const { sucId, quarter } = req.params;
@@ -98,11 +105,11 @@ exports.resetFiles = async (req, res) => {
     
     const doc = await Agenda.findOne({ sucId, year, quarter });
     if (doc) {
-      if (doc.oldAgenda?.s3Key) {
-        await deleteFromS3(doc.oldAgenda.s3Key);
-      }
-      if (doc.newAgenda?.s3Key) {
-        await deleteFromS3(doc.newAgenda.s3Key);
+      // Delete all S3 files: current + history
+      const allOld = [doc.oldAgenda, ...doc.oldAgendaHistory].filter(Boolean);
+      const allNew = [doc.newAgenda, ...doc.newAgendaHistory].filter(Boolean);
+      for (const f of [...allOld, ...allNew]) {
+        if (f.s3Key) await deleteFromS3(f.s3Key);
       }
       await doc.deleteOne();
     }
@@ -159,19 +166,25 @@ exports.getAgendaStatus = async (req, res) => {
 };
 
 // GET /api/agendas/file/:agendaId/:type  (type = old | new)
-// Streams the PDF to the browser.
-// Supports query-param token for browser-opened tabs: ?token=...
+// Supports ?v=N to serve a historical version; omit for current.
 exports.serveFile = async (req, res) => {
   try {
     const { agendaId, type } = req.params;
+    const vParam = req.query.v ? parseInt(req.query.v) : null;
     const doc = await Agenda.findById(agendaId);
     if (!doc) return res.status(404).json({ message: 'Not found' });
 
-    const file = type === 'old' ? doc.oldAgenda : doc.newAgenda;
-    if (!file) return res.status(404).json({ message: 'No file uploaded for this slot' });
+    let file;
+    if (vParam !== null) {
+      // Find in history by version number
+      const history = type === 'old' ? doc.oldAgendaHistory : doc.newAgendaHistory;
+      file = history.find((h) => h.version === vParam);
+    } else {
+      file = type === 'old' ? doc.oldAgenda : doc.newAgenda;
+    }
 
-    if (!file.s3Key && !file.data) {
-      return res.status(404).json({ message: 'No file uploaded for this slot' });
+    if (!file || (!file.s3Key && !file.data)) {
+      return res.status(404).json({ message: 'No file found for this version' });
     }
 
     res.set('Content-Type', file.contentType || 'application/pdf');

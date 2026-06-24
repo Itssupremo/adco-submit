@@ -16,6 +16,7 @@ exports.uploadMiddleware = upload.single('file');
 const safe = (doc) => {
   const obj = doc.toObject();
   if (obj.file) delete obj.file.data;
+  if (obj.fileHistory) obj.fileHistory.forEach((v) => delete v.data);
   return obj;
 };
 
@@ -25,7 +26,8 @@ exports.getDocs = async (req, res) => {
     const { sucId, year, pageType } = req.query;
     if (!sucId || !year || !pageType)
       return res.status(400).json({ message: 'sucId, year and pageType are required' });
-    const docs = await Document.find({ sucId, year: parseInt(year), pageType }).select('-file.data');
+    const docs = await Document.find({ sucId, year: parseInt(year), pageType })
+      .select('-file.data -fileHistory.data');
     res.json(docs);
   } catch {
     res.status(500).json({ message: 'Server error' });
@@ -42,8 +44,9 @@ exports.uploadFile = async (req, res) => {
     let doc = await Document.findOne({ sucId, year, pageType, slot });
     if (!doc) doc = new Document({ sucId, sucName, year, pageType, slot });
     if (req.file) {
-      if (doc.file?.s3Key) {
-        await deleteFromS3(doc.file.s3Key);
+      // Archive current version to history (do NOT delete S3 file)
+      if (doc.file?.filename) {
+        doc.fileHistory.push({ ...doc.file.toObject() });
       }
       const s3Key = await uploadToS3(req.file.originalname, req.file.buffer, req.file.mimetype);
       doc.file = {
@@ -52,6 +55,7 @@ exports.uploadFile = async (req, res) => {
         s3Key:       s3Key || undefined,
         contentType: req.file.mimetype,
         uploadedAt:  new Date(),
+        version:     (doc.file?.version || 0) + 1,
       };
     }
     await doc.save();
@@ -70,8 +74,10 @@ exports.resetFile = async (req, res) => {
     
     const doc = await Document.findOne({ sucId, year, pageType, slot });
     if (doc) {
-      if (doc.file?.s3Key) {
-        await deleteFromS3(doc.file.s3Key);
+      // Delete all S3 files: current + history
+      const allFiles = [doc.file, ...doc.fileHistory].filter(Boolean);
+      for (const f of allFiles) {
+        if (f.s3Key) await deleteFromS3(f.s3Key);
       }
       await doc.deleteOne();
     }
@@ -82,23 +88,33 @@ exports.resetFile = async (req, res) => {
   }
 };
 
-// GET /api/documents/file/:docId   (also accepts ?token= query for window.open)
+// GET /api/documents/file/:docId  (also accepts ?token= for window.open, ?v=N for historical version)
 exports.serveFile = async (req, res) => {
   try {
+    const vParam = req.query.v ? parseInt(req.query.v) : null;
     const doc = await Document.findById(req.params.docId);
     if (!doc) return res.status(404).json({ message: 'Not found' });
-    if (!doc.file) return res.status(404).json({ message: 'No file uploaded' });
-    if (!doc.file.s3Key && !doc.file.data) return res.status(404).json({ message: 'No file uploaded' });
 
-    res.set('Content-Type', doc.file.contentType || 'application/pdf');
-    res.set('Content-Disposition', `inline; filename="${encodeURIComponent(doc.file.filename)}"`);
+    let file;
+    if (vParam !== null) {
+      file = doc.fileHistory.find((h) => h.version === vParam);
+    } else {
+      file = doc.file;
+    }
 
-    if (doc.file.s3Key) {
-      const buffer = await getFromS3(doc.file.s3Key);
+    if (!file || (!file.s3Key && !file.data)) {
+      return res.status(404).json({ message: 'No file found for this version' });
+    }
+
+    res.set('Content-Type', file.contentType || 'application/pdf');
+    res.set('Content-Disposition', `inline; filename="${encodeURIComponent(file.filename)}"`);
+
+    if (file.s3Key) {
+      const buffer = await getFromS3(file.s3Key);
       if (!buffer) return res.status(404).json({ message: 'File not found in storage bucket' });
       res.send(buffer);
     } else {
-      res.send(doc.file.data);
+      res.send(file.data);
     }
   } catch (err) {
     res.status(500).json({ message: 'Server error' });

@@ -6,6 +6,7 @@ const fileSchema = new mongoose.Schema({
   s3Key:       { type: String },
   contentType: { type: String, default: 'application/pdf' },
   uploadedAt:  { type: Date },
+  version:     { type: Number, default: 0 },
 }, { _id: false });
 
 const documentSchema = new mongoose.Schema({
@@ -14,7 +15,8 @@ const documentSchema = new mongoose.Schema({
   year:     { type: Number, required: true },
   pageType: { type: String, enum: ['minutes', 'special'], required: true },
   slot:     { type: String, required: true },
-  file:     { type: fileSchema, default: () => ({}) },
+  file:        { type: fileSchema, default: () => ({}) },
+  fileHistory: { type: [fileSchema], default: [] },
 }, { timestamps: true });
 
 documentSchema.index({ sucId: 1, year: 1, pageType: 1, slot: 1 }, { unique: true });

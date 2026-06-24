@@ -23,11 +23,12 @@ const getLeaderLine = (user) => {
 };
 
 // ── Drag-and-drop file zone ──────────────────────────────────────────────────
-function DropZone({ label, file, onFile }) {
+function DropZone({ label, file, onFile, disabled = false }) {
   const inputRef = useRef();
   const [dragging, setDragging] = useState(false);
 
   const handleDrop = (e) => {
+    if (disabled) return;
     e.preventDefault();
     setDragging(false);
     const f = e.dataTransfer.files[0];
@@ -39,10 +40,18 @@ function DropZone({ label, file, onFile }) {
       <p className="agenda-upload-label mb-1">{label}</p>
       <div
         className={`agenda-dropzone${dragging ? ' dragging' : ''}${file ? ' has-file' : ''}`}
-        onClick={() => inputRef.current.click()}
-        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onClick={() => { if (!disabled) inputRef.current.click(); }}
+        onDragOver={(e) => {
+          if (disabled) return;
+          e.preventDefault();
+          setDragging(true);
+        }}
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
+        style={{
+          opacity: disabled ? 0.6 : 1,
+          cursor: disabled ? 'not-allowed' : 'pointer',
+        }}
       >
         {file ? (
           <span className="agenda-dropzone-file">
@@ -59,6 +68,7 @@ function DropZone({ label, file, onFile }) {
           ref={inputRef}
           type="file"
           accept="application/pdf"
+          disabled={disabled}
           style={{ display: 'none' }}
           onChange={(e) => { if (e.target.files[0]) onFile(e.target.files[0]); }}
         />
@@ -68,14 +78,65 @@ function DropZone({ label, file, onFile }) {
 }
 
 // ── PDF viewer modal ─────────────────────────────────────────────────────────
+// ── Version history dropdown ─────────────────────────────────────────────────
+function VersionDropdown({ history, onSelect }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef();
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div ref={ref} style={{ display: 'inline-block', position: 'relative', marginLeft: '6px' }}>
+      <button
+        className="btn btn-outline-secondary btn-sm"
+        style={{ fontSize: '0.72rem', padding: '1px 7px' }}
+        onClick={() => setOpen((o) => !o)}
+        type="button"
+      >
+        History ▾
+      </button>
+      {open && (
+        <ul
+          style={{
+            position: 'absolute', top: '100%', left: 0, zIndex: 1050,
+            background: '#fff', border: '1px solid #dee2e6', borderRadius: '4px',
+            minWidth: '220px', padding: '4px 0', margin: 0, listStyle: 'none',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+          }}
+        >
+          {[...history].reverse().map((h) => (
+            <li key={h.version}>
+              <button
+                className="dropdown-item"
+                style={{ fontSize: '0.82rem' }}
+                onClick={() => { setOpen(false); onSelect(h.version); }}
+              >
+                v{h.version} &mdash; {h.uploadedAt ? new Date(h.uploadedAt).toLocaleString() : 'unknown date'}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 // ── Single quarter card ──────────────────────────────────────────────────────
-function QuarterCard({ quarter, agendaDoc, sucId, sucName, year, onRefresh, onViewFile }) {
-  const [agendaFile, setAgendaFile] = useState(null);
+function QuarterCard({ quarter, agendaDoc, sucId, sucName, year, onRefresh, onViewFile, isUser }) {
+  const [proposedFile, setProposedFile] = useState(null);
+  const [approvedFile, setApprovedFile] = useState(null);
   const [saving,     setSaving]     = useState(false);
   const [resetting,  setResetting]  = useState(false);
   const [msg,        setMsg]        = useState(null);
 
-  useEffect(() => { setAgendaFile(null); setMsg(null); }, [sucId, year]);
+  useEffect(() => {
+    setProposedFile(null);
+    setApprovedFile(null);
+    setMsg(null);
+  }, [sucId, year]);
 
   const flash = (type, text) => {
     setMsg({ type, text });
@@ -83,16 +144,23 @@ function QuarterCard({ quarter, agendaDoc, sucId, sucName, year, onRefresh, onVi
   };
 
   const handleUpdate = async () => {
-    if (!agendaFile) return flash('warning', 'Please select a PDF file.');
+    if (!sucId) {
+      return flash('warning', 'Please select a SUC first.');
+    }
+    if (!proposedFile && !approvedFile) {
+      return flash('warning', 'Please select at least one PDF file.');
+    }
     setSaving(true);
     try {
       const fd = new FormData();
       fd.append('year', year);
       fd.append('sucName', sucName);
-      fd.append('newAgenda', agendaFile);
+      if (proposedFile) fd.append('oldAgenda', proposedFile);
+      if (approvedFile) fd.append('newAgenda', approvedFile);
       await uploadAgendaFiles(sucId, quarter, fd);
-      setAgendaFile(null);
-      flash('success', 'File updated successfully.');
+      setProposedFile(null);
+      setApprovedFile(null);
+      flash('success', 'Files updated successfully.');
       onRefresh();
     } catch (err) {
       flash('danger', err.response?.data?.message || 'Upload failed.');
@@ -102,11 +170,15 @@ function QuarterCard({ quarter, agendaDoc, sucId, sucName, year, onRefresh, onVi
   };
 
   const handleReset = async () => {
+    if (!sucId) {
+      return flash('warning', 'Please select a SUC first.');
+    }
     if (!window.confirm(`Reset ${quarter} Quarter e-Agenda file for this SUC?`)) return;
     setResetting(true);
     try {
       await resetAgenda(sucId, quarter, year);
-      setAgendaFile(null);
+      setProposedFile(null);
+      setApprovedFile(null);
       flash('success', 'Quarter files reset.');
       onRefresh();
     } catch (err) {
@@ -116,13 +188,22 @@ function QuarterCard({ quarter, agendaDoc, sucId, sucName, year, onRefresh, onVi
     }
   };
 
-  const currentFile = agendaDoc?.newAgenda?.filename || null;
+  const currentProposed = agendaDoc?.oldAgenda?.filename || null;
+  const currentApproved = agendaDoc?.newAgenda?.filename || null;
+  const proposedVersion = agendaDoc?.oldAgenda?.version || null;
+  const approvedVersion = agendaDoc?.newAgenda?.version || null;
+  const proposedHistory = agendaDoc?.oldAgendaHistory || [];
+  const approvedHistory = agendaDoc?.newAgendaHistory || [];
+  const proposedUploadedAt = agendaDoc?.oldAgenda?.uploadedAt;
+  const approvedUploadedAt = agendaDoc?.newAgenda?.uploadedAt;
+  const latestUpdatedAt = approvedUploadedAt || proposedUploadedAt;
 
-  const handleView = () => {
+  const handleView = (type, title, v = null) => {
     if (!agendaDoc?._id) return;
     const token = localStorage.getItem('token');
-    const url = `/api/agendas/file/${agendaDoc._id}/new?token=${token}`;
-    onViewFile(url, `${quarter} Quarter — e-Agenda Folder`);
+    const vParam = v !== null ? `&v=${v}` : '';
+    const url = `/api/agendas/file/${agendaDoc._id}/${type}?token=${token}${vParam}`;
+    onViewFile(url, v !== null ? `${title} (v${v})` : title);
   };
 
   return (
@@ -130,25 +211,75 @@ function QuarterCard({ quarter, agendaDoc, sucId, sucName, year, onRefresh, onVi
       {/* Yellow header */}
       <div className="agenda-quarter-header">
         <span className="agenda-quarter-title">{quarter} Quarter</span>
-        <span className="agenda-badge">
-          File: {currentFile ? currentFile.replace(/\.[^.]+$/, '').slice(0, 20) : 'none'}
-        </span>
+        <div className="d-flex gap-2">
+          <span className="agenda-badge">Proposed: {currentProposed ? 'available' : 'none'}</span>
+          <span className="agenda-badge">Approved: {currentApproved ? 'available' : 'none'}</span>
+        </div>
       </div>
 
       {/* White body */}
       <div className="agenda-quarter-body">
-        {/* Current file row */}
-        <div className="agenda-current-row">
-          <div>
-            <span className="agenda-current-label">Current e-Agenda Folder:</span>
-            {currentFile ? (
-              <button className="agenda-file-link btn btn-link p-0 ms-1" onClick={handleView}>
-                {currentFile}
-              </button>
-            ) : (
-              <span className="agenda-current-empty ms-1">—</span>
-            )}
+        <div className="agenda-current-row mb-2">
+          <div className="row g-3 w-100">
+            <div className="col-md-6">
+              <span className="agenda-current-label">Proposed Agenda:</span>
+              <div>
+                {currentProposed ? (
+                  <>
+                    <button
+                      className="agenda-file-link btn btn-link p-0"
+                      onClick={() => handleView('old', `${quarter} Quarter — Proposed Agenda`)}
+                    >
+                      Proposed Agenda
+                    </button>
+                    {proposedVersion && (
+                      <span className="badge bg-secondary ms-1" style={{ fontSize: '0.7rem' }}>v{proposedVersion}</span>
+                    )}
+                    {proposedHistory.length > 0 && (
+                      <VersionDropdown
+                        history={proposedHistory}
+                        onSelect={(v) => handleView('old', `${quarter} Quarter — Proposed Agenda`, v)}
+                      />
+                    )}
+                  </>
+                ) : (
+                  <span className="agenda-current-empty">Not uploaded</span>
+                )}
+              </div>
+            </div>
+            <div className="col-md-6">
+              <span className="agenda-current-label">Approved Agenda:</span>
+              <div>
+                {currentApproved ? (
+                  <>
+                    <button
+                      className="agenda-file-link btn btn-link p-0"
+                      onClick={() => handleView('new', `${quarter} Quarter — Approved Agenda`)}
+                    >
+                      Approved Agenda
+                    </button>
+                    {approvedVersion && (
+                      <span className="badge bg-secondary ms-1" style={{ fontSize: '0.7rem' }}>v{approvedVersion}</span>
+                    )}
+                    {approvedHistory.length > 0 && (
+                      <VersionDropdown
+                        history={approvedHistory}
+                        onSelect={(v) => handleView('new', `${quarter} Quarter — Approved Agenda`, v)}
+                      />
+                    )}
+                  </>
+                ) : (
+                  <span className="agenda-current-empty">Not uploaded</span>
+                )}
+              </div>
+            </div>
           </div>
+        </div>
+
+        <div className="agenda-current-row mb-2">
+          <span className="agenda-current-label">
+            Last updated: {latestUpdatedAt ? new Date(latestUpdatedAt).toLocaleString() : '—'}
+          </span>
         </div>
 
         {msg && (
@@ -157,25 +288,38 @@ function QuarterCard({ quarter, agendaDoc, sucId, sucName, year, onRefresh, onVi
           </div>
         )}
 
-        <DropZone label="Upload e-Agenda Folder (PDF)" file={agendaFile} onFile={setAgendaFile} />
+        <DropZone
+          label={<>Proposed Agenda (PDF) <em>(Order of Business Meeting)</em></>}
+          file={proposedFile}
+          onFile={setProposedFile}
+          disabled={!sucId || saving || resetting}
+        />
+        <DropZone
+          label={<>Approved Agenda (PDF) <em>(with Action Taken Plan)</em></>}
+          file={approvedFile}
+          onFile={setApprovedFile}
+          disabled={!sucId || saving || resetting}
+        />
 
         <div className="d-flex gap-2 mt-2">
           <button
             className="btn agenda-btn-update flex-fill"
             onClick={handleUpdate}
-            disabled={saving || resetting}
+            disabled={saving || resetting || !sucId}
           >
             {saving ? <span className="spinner-border spinner-border-sm me-1" /> : null}
-            Update File
+            Update Files
           </button>
-          <button
-            className="btn agenda-btn-reset flex-fill"
-            onClick={handleReset}
-            disabled={saving || resetting}
-          >
-            {resetting ? <span className="spinner-border spinner-border-sm me-1" /> : null}
-            Reset
-          </button>
+          {!isUser && (
+            <button
+              className="btn agenda-btn-reset flex-fill"
+              onClick={handleReset}
+              disabled={saving || resetting || !sucId}
+            >
+              {resetting ? <span className="spinner-border spinner-border-sm me-1" /> : null}
+              Reset
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -302,31 +446,32 @@ function RegularBoardMeeting({ user }) {
       <h2 className="agenda-page-title text-center mb-4">Regular Board Meeting Agenda</h2>
 
       {/* Quarter grid */}
-      {!selectedSuc ? (
-        <div className="text-center text-muted py-5">
-          <i className="bi bi-calendar3 fs-2 d-block mb-2" />
-          Select a SUC to view its agenda files.
-        </div>
-      ) : loading ? (
-        <div className="text-center py-5">
-          <div className="spinner-border text-primary" />
-        </div>
-      ) : (
-        <div className="agenda-quarters-grid">
-          {QUARTERS.map((q) => (
-            <QuarterCard
-              key={q}
-              quarter={q}
-              agendaDoc={getDoc(q)}
-              sucId={selectedSuc}
-              sucName={selectedSucName}
-              year={year}
-              onRefresh={fetchAgendas}
-              onViewFile={openPdf}
-            />
-          ))}
+      {!selectedSuc && (
+        <div className="alert alert-warning py-2 px-3 mb-3" role="alert">
+          Select a SUC to enable upload, update, and reset actions.
         </div>
       )}
+      {loading && selectedSuc && (
+        <div className="text-center text-muted mb-3">
+          <span className="spinner-border spinner-border-sm text-primary me-2" />
+          Loading agenda files...
+        </div>
+      )}
+      <div className="agenda-quarters-grid">
+        {QUARTERS.map((q) => (
+          <QuarterCard
+            key={q}
+            quarter={q}
+            agendaDoc={getDoc(q)}
+            sucId={selectedSuc}
+            sucName={selectedSucName}
+            year={year}
+            onRefresh={fetchAgendas}
+            onViewFile={openPdf}
+            isUser={isUser}
+          />
+        ))}
+      </div>
 
       {pdfModal.open && (
         <PdfViewer url={pdfModal.url} title={pdfModal.title} onClose={closePdf} />

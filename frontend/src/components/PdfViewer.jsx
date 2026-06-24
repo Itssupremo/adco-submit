@@ -1,32 +1,147 @@
-import { useState, useRef, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import * as pdfjsLib from 'pdfjs-dist';
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
+
+function PdfPage({ pdf, pageNumber, scale }) {
+  const canvasRef = useRef(null);
+  const [pageSize, setPageSize] = useState({ width: 0, height: 0 });
+  const [links, setLinks] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let renderTask = null;
+
+    const renderPage = async () => {
+      const page = await pdf.getPage(pageNumber);
+      const outputScale = window.devicePixelRatio || 1;
+      const displayViewport = page.getViewport({ scale });
+      const renderViewport = page.getViewport({ scale: scale * outputScale });
+      const canvas = canvasRef.current;
+      if (!canvas || cancelled) return;
+
+      const context = canvas.getContext('2d');
+      canvas.width = Math.ceil(renderViewport.width);
+      canvas.height = Math.ceil(renderViewport.height);
+      canvas.style.width = `${Math.ceil(displayViewport.width)}px`;
+      canvas.style.height = `${Math.ceil(displayViewport.height)}px`;
+      setPageSize({ width: Math.ceil(displayViewport.width), height: Math.ceil(displayViewport.height) });
+
+      renderTask = page.render({ canvasContext: context, viewport: renderViewport });
+      await renderTask.promise;
+      if (cancelled) return;
+
+      const annotations = await page.getAnnotations();
+      if (cancelled) return;
+
+      const nextLinks = annotations
+        .filter((annotation) => annotation.subtype === 'Link' && (annotation.url || annotation.unsafeUrl))
+        .map((annotation, index) => {
+          const [x1, y1, x2, y2] = displayViewport.convertToViewportRectangle(annotation.rect);
+          return {
+            id: `${pageNumber}-${index}`,
+            href: annotation.url || annotation.unsafeUrl,
+            left: Math.min(x1, x2),
+            top: Math.min(y1, y2),
+            width: Math.abs(x2 - x1),
+            height: Math.abs(y2 - y1),
+          };
+        });
+
+      setLinks(nextLinks);
+    };
+
+    renderPage().catch(() => {
+      if (!cancelled) setLinks([]);
+    });
+
+    return () => {
+      cancelled = true;
+      if (renderTask) {
+        renderTask.cancel();
+      }
+    };
+  }, [pdf, pageNumber, scale]);
+
+  return (
+    <div
+      style={{
+        position: 'relative',
+        width: pageSize.width || 'fit-content',
+        marginBottom: 24,
+        background: '#fff',
+        boxShadow: '0 6px 40px rgba(0,0,0,0.7)',
+      }}
+    >
+      <canvas ref={canvasRef} style={{ display: 'block' }} />
+      {links.map((link) => (
+        <a
+          key={link.id}
+          href={link.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={link.href}
+          style={{
+            position: 'absolute',
+            left: link.left,
+            top: link.top,
+            width: link.width,
+            height: link.height,
+            background: 'rgba(37, 99, 235, 0.08)',
+            border: '1px solid rgba(37, 99, 235, 0.18)',
+            boxSizing: 'border-box',
+          }}
+        />
+      ))}
+    </div>
+  );
+}
 
 export default function PdfViewer({ url, title, onClose }) {
   const [zoom, setZoom] = useState(100);
-  const iframeRef  = useRef();
-  const pdfSrc     = `${url}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`;
-  const loadCount  = useRef(0); // first load is the PDF itself
+  const [pdfDoc, setPdfDoc] = useState(null);
+  const [pageCount, setPageCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    loadCount.current = 0; // reset when url changes
+    let cancelled = false;
+    let task = null;
+
+    const loadPdf = async () => {
+      setLoading(true);
+      setError('');
+      setPdfDoc(null);
+      setPageCount(0);
+
+      task = pdfjsLib.getDocument({ url, withCredentials: false });
+      const pdf = await task.promise;
+      if (cancelled) {
+        await pdf.destroy();
+        return;
+      }
+      setPdfDoc(pdf);
+      setPageCount(pdf.numPages);
+      setLoading(false);
+    };
+
+    loadPdf().catch((err) => {
+      if (!cancelled) {
+        setError(err?.message || 'Failed to load PDF.');
+        setLoading(false);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      if (task) {
+        task.destroy();
+      }
+    };
   }, [url]);
 
-  const handleLoad = () => {
-    loadCount.current += 1;
-    if (loadCount.current <= 1) return; // first load = PDF itself, ignore
-
-    // A link inside the PDF was clicked — iframe navigated away
-    try {
-      const href = iframeRef.current?.contentWindow?.location?.href;
-      if (href && href !== 'about:blank') {
-        window.open(href, '_blank', 'noopener,noreferrer');
-      }
-    } catch (_) {
-      // cross-origin (external link) — still open via src attribute comparison trick below
-    }
-    // Always restore the PDF
-    iframeRef.current.src = pdfSrc;
-    loadCount.current = 1;
-  };
+  const scale = zoom / 100;
 
   return (
     <div style={{
@@ -91,21 +206,26 @@ export default function PdfViewer({ url, title, onClose }) {
 
       {/* ── PDF content ── */}
       <div style={{ flex: 1, overflow: 'auto', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '28px 20px' }}>
-        <iframe
-          ref={iframeRef}
-          src={pdfSrc}
-          onLoad={handleLoad}
-          title={title}
-          style={{
-            border: 'none',
-            width: `${Math.round((zoom / 100) * 960)}px`,
-            minWidth: 480,
-            height: 'calc(100vh - 106px)',
-            boxShadow: '0 6px 40px rgba(0,0,0,0.7)',
-            background: '#fff',
-            flexShrink: 0,
-          }}
-        />
+        {loading ? (
+          <div style={{ color: '#e2e2e2', paddingTop: 80, fontSize: '0.95rem' }}>
+            Loading PDF...
+          </div>
+        ) : error ? (
+          <div style={{ color: '#fca5a5', paddingTop: 80, fontSize: '0.95rem', textAlign: 'center' }}>
+            {error}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            {Array.from({ length: pageCount }, (_, index) => (
+              <PdfPage
+                key={`${url}-${index + 1}-${zoom}`}
+                pdf={pdfDoc}
+                pageNumber={index + 1}
+                scale={scale}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

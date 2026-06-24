@@ -14,12 +14,58 @@ const getLeaderLine = (user) => {
   return user.fullname;
 };
 
-// ── Drag-and-drop zone ────────────────────────────────────────────────────────
-function DropZone({ file, onFile }) {
+// ── Version history dropdown ──────────────────────────────────────────────────
+function VersionDropdown({ history, onSelect }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef();
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div ref={ref} style={{ display: 'inline-block', position: 'relative', marginLeft: '6px' }}>
+      <button
+        className="btn btn-outline-secondary btn-sm"
+        style={{ fontSize: '0.72rem', padding: '1px 7px' }}
+        onClick={() => setOpen((o) => !o)}
+        type="button"
+      >
+        History ▾
+      </button>
+      {open && (
+        <ul
+          style={{
+            position: 'absolute', top: '100%', left: 0, zIndex: 1050,
+            background: '#fff', border: '1px solid #dee2e6', borderRadius: '4px',
+            minWidth: '220px', padding: '4px 0', margin: 0, listStyle: 'none',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+          }}
+        >
+          {[...history].reverse().map((h) => (
+            <li key={h.version}>
+              <button
+                className="dropdown-item"
+                style={{ fontSize: '0.82rem' }}
+                onClick={() => { setOpen(false); onSelect(h.version); }}
+              >
+                v{h.version} &mdash; {h.uploadedAt ? new Date(h.uploadedAt).toLocaleString() : 'unknown date'}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+function DropZone({ file, onFile, disabled = false }) {
   const inputRef = useRef();
   const [dragging, setDragging] = useState(false);
 
   const handleDrop = (e) => {
+    if (disabled) return;
     e.preventDefault();
     setDragging(false);
     const f = e.dataTransfer.files[0];
@@ -31,10 +77,18 @@ function DropZone({ file, onFile }) {
       <p className="agenda-upload-label mb-1">Minutes of the Meeting (PDF)</p>
       <div
         className={`agenda-dropzone${dragging ? ' dragging' : ''}${file ? ' has-file' : ''}`}
-        onClick={() => inputRef.current.click()}
-        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onClick={() => { if (!disabled) inputRef.current.click(); }}
+        onDragOver={(e) => {
+          if (disabled) return;
+          e.preventDefault();
+          setDragging(true);
+        }}
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
+        style={{
+          opacity: disabled ? 0.6 : 1,
+          cursor: disabled ? 'not-allowed' : 'pointer',
+        }}
       >
         {file ? (
           <span className="agenda-dropzone-file">
@@ -51,6 +105,7 @@ function DropZone({ file, onFile }) {
           ref={inputRef}
           type="file"
           accept="application/pdf"
+          disabled={disabled}
           style={{ display: 'none' }}
           onChange={(e) => { if (e.target.files[0]) onFile(e.target.files[0]); }}
         />
@@ -60,7 +115,7 @@ function DropZone({ file, onFile }) {
 }
 
 // ── Single quarter card ───────────────────────────────────────────────────────
-function QuarterCard({ quarter, doc, sucId, sucName, year, onRefresh, onViewFile }) {
+function QuarterCard({ quarter, doc, sucId, sucName, year, onRefresh, onViewFile, isUser }) {
   const [file,      setFile]      = useState(null);
   const [saving,    setSaving]    = useState(false);
   const [resetting, setResetting] = useState(false);
@@ -74,6 +129,7 @@ function QuarterCard({ quarter, doc, sucId, sucName, year, onRefresh, onViewFile
   };
 
   const handleUpdate = async () => {
+    if (!sucId) return flash('warning', 'Please select a SUC first.');
     if (!file) return flash('warning', 'Please select a PDF file.');
     setSaving(true);
     try {
@@ -93,6 +149,7 @@ function QuarterCard({ quarter, doc, sucId, sucName, year, onRefresh, onViewFile
   };
 
   const handleReset = async () => {
+    if (!sucId) return flash('warning', 'Please select a SUC first.');
     if (!window.confirm(`Reset ${quarter} Quarter Minutes for this SUC?`)) return;
     setResetting(true);
     try {
@@ -108,12 +165,16 @@ function QuarterCard({ quarter, doc, sucId, sucName, year, onRefresh, onViewFile
   };
 
   const currentFilename = doc?.file?.filename || null;
+  const currentVersion  = doc?.file?.version  || null;
+  const fileHistory     = doc?.fileHistory     || [];
 
-  const openFile = () => {
+  const openFile = (v = null) => {
     if (!doc?._id) return;
     const token = localStorage.getItem('token');
-    const url = `/api/documents/file/${doc._id}?token=${token}`;
-    onViewFile(url, `${quarter} Quarter — Minutes of the Meeting`);
+    const vParam = v !== null ? `&v=${v}` : '';
+    const url = `/api/documents/file/${doc._id}?token=${token}${vParam}`;
+    const title = `${quarter} Quarter — Minutes of the Meeting`;
+    onViewFile(url, v !== null ? `${title} (v${v})` : title);
   };
 
   return (
@@ -130,9 +191,20 @@ function QuarterCard({ quarter, doc, sucId, sucName, year, onRefresh, onViewFile
           <div>
             <span className="agenda-current-label">Current Minutes (PDF):</span>
             {currentFilename ? (
-              <button className="agenda-file-link btn btn-link p-0 ms-1" onClick={openFile}>
-                {currentFilename}
-              </button>
+              <>
+                <button className="agenda-file-link btn btn-link p-0 ms-1" onClick={() => openFile()}>
+                  {currentFilename}
+                </button>
+                {currentVersion && (
+                  <span className="badge bg-secondary ms-1" style={{ fontSize: '0.7rem' }}>v{currentVersion}</span>
+                )}
+                {fileHistory.length > 0 && (
+                  <VersionDropdown
+                    history={fileHistory}
+                    onSelect={(v) => openFile(v)}
+                  />
+                )}
+              </>
             ) : (
               <span className="agenda-current-empty ms-1">—</span>
             )}
@@ -145,17 +217,19 @@ function QuarterCard({ quarter, doc, sucId, sucName, year, onRefresh, onViewFile
           </div>
         )}
 
-        <DropZone file={file} onFile={setFile} />
+        <DropZone file={file} onFile={setFile} disabled={!sucId || saving || resetting} />
 
         <div className="d-flex gap-2 mt-2">
-          <button className="btn agenda-btn-update flex-fill" onClick={handleUpdate} disabled={saving || resetting}>
+          <button className="btn agenda-btn-update flex-fill" onClick={handleUpdate} disabled={saving || resetting || !sucId}>
             {saving ? <span className="spinner-border spinner-border-sm me-1" /> : null}
             Update File
           </button>
-          <button className="btn agenda-btn-reset flex-fill" onClick={handleReset} disabled={saving || resetting}>
-            {resetting ? <span className="spinner-border spinner-border-sm me-1" /> : null}
-            Reset
-          </button>
+          {!isUser && (
+            <button className="btn agenda-btn-reset flex-fill" onClick={handleReset} disabled={saving || resetting || !sucId}>
+              {resetting ? <span className="spinner-border spinner-border-sm me-1" /> : null}
+              Reset
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -285,29 +359,31 @@ function MinutesOfMeeting({ user }) {
 
       <h2 className="agenda-page-title text-center mb-4">Minutes of the Meeting</h2>
 
-      {!selectedSuc ? (
-        <div className="text-center text-muted py-5">
-          <i className="bi bi-journal-text fs-2 d-block mb-2" />
-          Select a SUC to view its Minutes of the Meeting.
-        </div>
-      ) : loading ? (
-        <div className="text-center py-5"><div className="spinner-border text-success" /></div>
-      ) : (
-        <div className="agenda-quarters-grid">
-          {QUARTERS.map((q) => (
-            <QuarterCard
-              key={q}
-              quarter={q}
-              doc={getDoc(q)}
-              sucId={selectedSuc}
-              sucName={selectedSucName}
-              year={year}
-              onRefresh={fetchDocs}
-              onViewFile={openPdf}
-            />
-          ))}
+      {!selectedSuc && (
+        <div className="alert alert-warning py-2 px-3 mb-3" role="alert">
+          Select a SUC to enable upload, update, and reset actions.
         </div>
       )}
+      {loading && selectedSuc && (
+        <div className="text-center text-muted mb-3">
+          <span className="spinner-border spinner-border-sm text-success me-2" />
+          Loading minutes files...
+        </div>
+      )}
+      <div className="agenda-quarters-grid">
+        {QUARTERS.map((q) => (
+          <QuarterCard
+            key={q}
+            quarter={q}
+            doc={getDoc(q)}
+            sucId={selectedSuc}
+            sucName={selectedSucName}
+            year={year}
+            onRefresh={fetchDocs}
+            onViewFile={openPdf}
+          />
+        ))}
+      </div>
 
       {pdfModal.open && (
         <PdfViewer url={pdfModal.url} title={pdfModal.title} onClose={closePdf} />

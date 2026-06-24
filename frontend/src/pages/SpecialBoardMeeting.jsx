@@ -20,12 +20,58 @@ const getLeaderLine = (user) => {
   return user.fullname;
 };
 
-// ── Drag-and-drop zone ────────────────────────────────────────────────────────
-function DropZone({ label, file, onFile }) {
+// ── Version history dropdown ──────────────────────────────────────────────────
+function VersionDropdown({ history, onSelect }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef();
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div ref={ref} style={{ display: 'inline-block', position: 'relative', marginLeft: '6px' }}>
+      <button
+        className="btn btn-outline-secondary btn-sm"
+        style={{ fontSize: '0.72rem', padding: '1px 7px' }}
+        onClick={() => setOpen((o) => !o)}
+        type="button"
+      >
+        History ▾
+      </button>
+      {open && (
+        <ul
+          style={{
+            position: 'absolute', top: '100%', left: 0, zIndex: 1050,
+            background: '#fff', border: '1px solid #dee2e6', borderRadius: '4px',
+            minWidth: '220px', padding: '4px 0', margin: 0, listStyle: 'none',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+          }}
+        >
+          {[...history].reverse().map((h) => (
+            <li key={h.version}>
+              <button
+                className="dropdown-item"
+                style={{ fontSize: '0.82rem' }}
+                onClick={() => { setOpen(false); onSelect(h.version); }}
+              >
+                v{h.version} &mdash; {h.uploadedAt ? new Date(h.uploadedAt).toLocaleString() : 'unknown date'}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+function DropZone({ label, file, onFile, disabled = false }) {
   const inputRef = useRef();
   const [dragging, setDragging] = useState(false);
 
   const handleDrop = (e) => {
+    if (disabled) return;
     e.preventDefault();
     setDragging(false);
     const f = e.dataTransfer.files[0];
@@ -37,10 +83,18 @@ function DropZone({ label, file, onFile }) {
       <p className="agenda-upload-label mb-1">{label}</p>
       <div
         className={`agenda-dropzone${dragging ? ' dragging' : ''}${file ? ' has-file' : ''}`}
-        onClick={() => inputRef.current.click()}
-        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onClick={() => { if (!disabled) inputRef.current.click(); }}
+        onDragOver={(e) => {
+          if (disabled) return;
+          e.preventDefault();
+          setDragging(true);
+        }}
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
+        style={{
+          opacity: disabled ? 0.6 : 1,
+          cursor: disabled ? 'not-allowed' : 'pointer',
+        }}
       >
         {file ? (
           <span className="agenda-dropzone-file">
@@ -57,6 +111,7 @@ function DropZone({ label, file, onFile }) {
           ref={inputRef}
           type="file"
           accept="application/pdf"
+          disabled={disabled}
           style={{ display: 'none' }}
           onChange={(e) => { if (e.target.files[0]) onFile(e.target.files[0]); }}
         />
@@ -66,7 +121,7 @@ function DropZone({ label, file, onFile }) {
 }
 
 // ── Single meeting card ───────────────────────────────────────────────────────
-function MeetingCard({ slotInfo, doc, sucId, sucName, year, onRefresh, onViewFile }) {
+function MeetingCard({ slotInfo, doc, sucId, sucName, year, onRefresh, onViewFile, isUser }) {
   const [file,      setFile]      = useState(null);
   const [saving,    setSaving]    = useState(false);
   const [resetting, setResetting] = useState(false);
@@ -80,6 +135,7 @@ function MeetingCard({ slotInfo, doc, sucId, sucName, year, onRefresh, onViewFil
   };
 
   const handleUpdate = async () => {
+    if (!sucId) return flash('warning', 'Please select a SUC first.');
     if (!file) return flash('warning', 'Please select a PDF file.');
     setSaving(true);
     try {
@@ -99,6 +155,7 @@ function MeetingCard({ slotInfo, doc, sucId, sucName, year, onRefresh, onViewFil
   };
 
   const handleReset = async () => {
+    if (!sucId) return flash('warning', 'Please select a SUC first.');
     if (!window.confirm(`Reset "${slotInfo.title}" file for this SUC?`)) return;
     setResetting(true);
     try {
@@ -114,12 +171,15 @@ function MeetingCard({ slotInfo, doc, sucId, sucName, year, onRefresh, onViewFil
   };
 
   const currentFilename = doc?.file?.filename || null;
+  const currentVersion  = doc?.file?.version  || null;
+  const fileHistory     = doc?.fileHistory     || [];
 
-  const openFile = () => {
+  const openFile = (v = null) => {
     if (!doc?._id) return;
     const token = localStorage.getItem('token');
-    const url = `/api/documents/file/${doc._id}?token=${token}`;
-    onViewFile(url, slotInfo.title);
+    const vParam = v !== null ? `&v=${v}` : '';
+    const url = `/api/documents/file/${doc._id}?token=${token}${vParam}`;
+    onViewFile(url, v !== null ? `${slotInfo.title} (v${v})` : slotInfo.title);
   };
 
   return (
@@ -136,9 +196,20 @@ function MeetingCard({ slotInfo, doc, sucId, sucName, year, onRefresh, onViewFil
           <div>
             <span className="agenda-current-label">{slotInfo.currentLabel}</span>
             {currentFilename ? (
-              <button className="agenda-file-link btn btn-link p-0 ms-1" onClick={openFile}>
-                {currentFilename}
-              </button>
+              <>
+                <button className="agenda-file-link btn btn-link p-0 ms-1" onClick={() => openFile()}>
+                  {currentFilename}
+                </button>
+                {currentVersion && (
+                  <span className="badge bg-secondary ms-1" style={{ fontSize: '0.7rem' }}>v{currentVersion}</span>
+                )}
+                {fileHistory.length > 0 && (
+                  <VersionDropdown
+                    history={fileHistory}
+                    onSelect={(v) => openFile(v)}
+                  />
+                )}
+              </>
             ) : (
               <span className="agenda-current-empty ms-1">—</span>
             )}
@@ -151,17 +222,24 @@ function MeetingCard({ slotInfo, doc, sucId, sucName, year, onRefresh, onViewFil
           </div>
         )}
 
-        <DropZone label={slotInfo.fileLabel} file={file} onFile={setFile} />
+        <DropZone
+          label={slotInfo.fileLabel}
+          file={file}
+          onFile={setFile}
+          disabled={!sucId || saving || resetting}
+        />
 
         <div className="d-flex gap-2 mt-2">
-          <button className="btn agenda-btn-update flex-fill" onClick={handleUpdate} disabled={saving || resetting}>
+          <button className="btn agenda-btn-update flex-fill" onClick={handleUpdate} disabled={saving || resetting || !sucId}>
             {saving ? <span className="spinner-border spinner-border-sm me-1" /> : null}
             Update File
           </button>
-          <button className="btn agenda-btn-reset flex-fill" onClick={handleReset} disabled={saving || resetting}>
-            {resetting ? <span className="spinner-border spinner-border-sm me-1" /> : null}
-            Reset
-          </button>
+          {!isUser && (
+            <button className="btn agenda-btn-reset flex-fill" onClick={handleReset} disabled={saving || resetting || !sucId}>
+              {resetting ? <span className="spinner-border spinner-border-sm me-1" /> : null}
+              Reset
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -291,29 +369,32 @@ function SpecialBoardMeeting({ user }) {
 
       <h2 className="agenda-page-title text-center mb-4">Special Board Meeting</h2>
 
-      {!selectedSuc ? (
-        <div className="text-center text-muted py-5">
-          <i className="bi bi-calendar-event fs-2 d-block mb-2" />
-          Select a SUC to view its Special Board Meeting files.
-        </div>
-      ) : loading ? (
-        <div className="text-center py-5"><div className="spinner-border text-primary" /></div>
-      ) : (
-        <div className="agenda-quarters-grid">
-          {SLOTS.map((slotInfo) => (
-            <MeetingCard
-              key={slotInfo.slot}
-              slotInfo={slotInfo}
-              doc={getDoc(slotInfo.slot)}
-              sucId={selectedSuc}
-              sucName={selectedSucName}
-              year={year}
-              onRefresh={fetchDocs}
-              onViewFile={openPdf}
-            />
-          ))}
+      {!selectedSuc && (
+        <div className="alert alert-warning py-2 px-3 mb-3" role="alert">
+          Select a SUC to enable upload, update, and reset actions.
         </div>
       )}
+      {loading && selectedSuc && (
+        <div className="text-center text-muted mb-3">
+          <span className="spinner-border spinner-border-sm text-primary me-2" />
+          Loading special board meeting files...
+        </div>
+      )}
+      <div className="agenda-quarters-grid">
+        {SLOTS.map((slotInfo) => (
+          <MeetingCard
+            key={slotInfo.slot}
+            slotInfo={slotInfo}
+            doc={getDoc(slotInfo.slot)}
+            sucId={selectedSuc}
+            sucName={selectedSucName}
+            year={year}
+            onRefresh={fetchDocs}
+            onViewFile={openPdf}
+            isUser={isUser}
+          />
+        ))}
+      </div>
 
       {pdfModal.open && (
         <PdfViewer url={pdfModal.url} title={pdfModal.title} onClose={closePdf} />
