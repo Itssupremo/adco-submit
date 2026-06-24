@@ -59,12 +59,18 @@ app.use(express.json());
 
 
 // Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/sucs', sucRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/agendas',             agendaRoutes);
-app.use('/api/documents',          documentRoutes);
-app.use('/api/dateboardmeetings',   dateBoardMeetingRoutes);
+// Mount both with and without /api prefix to support platforms that trim path prefixes.
+const mountRoutes = (prefix = '') => {
+  app.use(`${prefix}/auth`, authRoutes);
+  app.use(`${prefix}/sucs`, sucRoutes);
+  app.use(`${prefix}/users`, userRoutes);
+  app.use(`${prefix}/agendas`, agendaRoutes);
+  app.use(`${prefix}/documents`, documentRoutes);
+  app.use(`${prefix}/dateboardmeetings`, dateBoardMeetingRoutes);
+};
+
+mountRoutes('/api');
+mountRoutes('');
 
 // Health endpoints for platforms/readiness checks
 app.get('/health', (req, res) => {
