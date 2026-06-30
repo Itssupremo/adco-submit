@@ -196,9 +196,9 @@ function AdminDashboard({ user }) {
 
   // Stats
   const today = new Date().toISOString().split('T')[0];
-  const upcomingCount = reminders.filter(r => r.meetingDate && r.meetingDate > today).length;
-  const pendingCount = reminders.filter(r => checkAgendaStatus(r) === 'Pending').length;
-  const uploadedCount = reminders.filter(r => checkAgendaStatus(r) === 'Uploaded').length;
+  const upcomingCount = filteredReminders.filter(r => r.meetingDate && r.meetingDate > today).length;
+  const pendingCount = filteredReminders.filter(r => checkAgendaStatus(r) === 'Pending').length;
+  const uploadedCount = filteredReminders.filter(r => checkAgendaStatus(r) === 'Uploaded').length;
 
   return (
     <div>
@@ -237,7 +237,7 @@ function AdminDashboard({ user }) {
             <div className="card-body d-flex align-items-center justify-content-between">
               <div>
                 <div style={{ fontSize: '0.72rem', fontWeight: 700, opacity: 0.75, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 4 }}>Total Reminders</div>
-                <div style={{ fontSize: '2rem', fontWeight: 900, lineHeight: 1 }}>{reminders.length}</div>
+                <div style={{ fontSize: '2rem', fontWeight: 900, lineHeight: 1 }}>{filteredReminders.length}</div>
               </div>
               <div className="stat-card-icon"><i className="bi bi-bell-fill" /></div>
             </div>
