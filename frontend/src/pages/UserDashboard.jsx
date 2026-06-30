@@ -103,6 +103,26 @@ function UserDashboard({ user }) {
     return true;
   });
 
+  const sortedReminders = [...filteredReminders].sort((a, b) => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const dateA = a.meetingDate || '';
+    const dateB = b.meetingDate || '';
+
+    const isUpcomingOrTodayA = dateA >= todayStr;
+    const isUpcomingOrTodayB = dateB >= todayStr;
+
+    if (isUpcomingOrTodayA && !isUpcomingOrTodayB) return -1;
+    if (!isUpcomingOrTodayA && isUpcomingOrTodayB) return 1;
+
+    if (isUpcomingOrTodayA && isUpcomingOrTodayB) {
+      if (dateA !== dateB) return dateA.localeCompare(dateB);
+      return (a.meetingTime || '').localeCompare(b.meetingTime || '');
+    } else {
+      if (dateA !== dateB) return dateB.localeCompare(dateA);
+      return (b.meetingTime || '').localeCompare(a.meetingTime || '');
+    }
+  });
+
   const hasActiveFilters = filterYear || filterQuarter || filterMeetingType;
 
   const clearAllFilters = () => {
@@ -302,13 +322,13 @@ function UserDashboard({ user }) {
                     </td>
                   </tr>
                 ) : (
-                  filteredReminders.map((r, idx) => {
+                  sortedReminders.map((r, idx) => {
                     const todayStr = new Date().toISOString().split('T')[0];
                     const isPast = r.meetingDate && r.meetingDate < todayStr;
                     const isToday = r.meetingDate === todayStr;
                     const isUpcoming = r.meetingDate && r.meetingDate > todayStr;
                     return (
-                      <tr key={r._id}>
+                      <tr key={r._id} className={isToday ? 'table-danger' : isUpcoming ? 'table-warning' : ''}>
                         <td style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{idx + 1}</td>
                         <td>
                           <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{r.title}</div>

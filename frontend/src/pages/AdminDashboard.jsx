@@ -113,6 +113,26 @@ function AdminDashboard({ user }) {
     return true;
   });
 
+  const sortedReminders = [...filteredReminders].sort((a, b) => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const dateA = a.meetingDate || '';
+    const dateB = b.meetingDate || '';
+
+    const isUpcomingOrTodayA = dateA >= todayStr;
+    const isUpcomingOrTodayB = dateB >= todayStr;
+
+    if (isUpcomingOrTodayA && !isUpcomingOrTodayB) return -1;
+    if (!isUpcomingOrTodayA && isUpcomingOrTodayB) return 1;
+
+    if (isUpcomingOrTodayA && isUpcomingOrTodayB) {
+      if (dateA !== dateB) return dateA.localeCompare(dateB);
+      return (a.meetingTime || '').localeCompare(b.meetingTime || '');
+    } else {
+      if (dateA !== dateB) return dateB.localeCompare(dateA);
+      return (b.meetingTime || '').localeCompare(a.meetingTime || '');
+    }
+  });
+
   const handleOfficialFilterChange = (e) => {
     setFilterOfficial(e.target.value);
     setFilterSuc('');
@@ -421,7 +441,7 @@ function AdminDashboard({ user }) {
                     </td>
                   </tr>
                 ) : (
-                  filteredReminders.map((r, idx) => {
+                  sortedReminders.map((r, idx) => {
                     const todayStr = new Date().toISOString().split('T')[0];
                     const isPast = r.meetingDate && r.meetingDate < todayStr;
                     const isToday = r.meetingDate === todayStr;
