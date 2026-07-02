@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { getSucs, getDocs, uploadDoc, resetDoc } from '../services/api';
 import PdfViewer from '../components/PdfViewer';
 
@@ -121,7 +122,7 @@ function DropZone({ label, file, onFile, disabled = false }) {
 }
 
 // ── Single meeting card ───────────────────────────────────────────────────────
-function MeetingCard({ slotInfo, doc, sucId, sucName, year, onRefresh, onViewFile, user }) {
+function MeetingCard({ slotInfo, doc, sucId, sucName, year, onRefresh, onViewFile, user, highlighted }) {
   const [file,      setFile]      = useState(null);
   const [saving,    setSaving]    = useState(false);
   const [resetting, setResetting] = useState(false);
@@ -186,7 +187,7 @@ function MeetingCard({ slotInfo, doc, sucId, sucName, year, onRefresh, onViewFil
   };
 
   return (
-    <div className="agenda-quarter-card">
+    <div className={`agenda-quarter-card${highlighted ? ' highlighted' : ''}`}>
       <div className="agenda-quarter-header agenda-quarter-header--blue">
         <span className="agenda-quarter-title" style={{ color: '#fff' }}>{slotInfo.title}</span>
         <span className="agenda-badge">
@@ -263,6 +264,10 @@ const OCC_OFFICIALS = [
 ];
 
 function SpecialBoardMeeting({ user }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const state = location.state || {};
+
   const [year,        setYear]        = useState(CURRENT_YEAR);
   const [sucs,        setSucs]        = useState([]);
   const [selectedSuc, setSelectedSuc] = useState('');
@@ -270,6 +275,7 @@ function SpecialBoardMeeting({ user }) {
   const [docs,        setDocs]        = useState([]);
   const [loading,     setLoading]     = useState(false);
   const [pdfModal,    setPdfModal]    = useState({ open: false, url: '', title: '' });
+  const [highlightSlot, setHighlightSlot] = useState(null);
   const isUser = ['user', 'board_member'].includes(user?.role);
 
   const filteredSucs = occFilter ? sucs.filter((s) => s.occCode === occFilter) : sucs;
@@ -282,13 +288,46 @@ function SpecialBoardMeeting({ user }) {
       .then((res) => {
         const list = res.data;
         setSucs(list);
-        if (['user', 'board_member'].includes(user?.role) && user?.sucAbbreviation) {
+        
+        let targetSucId = '';
+        if (state.sucAbbreviation) {
+          const match = list.find((s) => s.abbreviation === state.sucAbbreviation);
+          if (match) {
+            targetSucId = match._id;
+          }
+        }
+        
+        if (!targetSucId && ['user', 'board_member'].includes(user?.role) && user?.sucAbbreviation) {
           const match = list.find((s) => s.abbreviation === user.sucAbbreviation);
-          if (match) setSelectedSuc(match._id);
+          if (match) {
+            targetSucId = match._id;
+          }
+        }
+        
+        if (targetSucId) {
+          setSelectedSuc(targetSucId);
+        }
+
+        // Clear navigation state
+        if (state.sucAbbreviation || state.year || state.slot) {
+          navigate(location.pathname, { replace: true, state: {} });
         }
       })
       .catch(() => {});
-  }, []);
+  }, [state.sucAbbreviation]);
+
+  useEffect(() => {
+    if (state.year) {
+      setYear(Number(state.year));
+    }
+    if (state.slot) {
+      setHighlightSlot(state.slot);
+      const timer = setTimeout(() => {
+        setHighlightSlot(null);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [state.year, state.slot]);
 
   const fetchDocs = async () => {
     if (!selectedSuc) return setDocs([]);
@@ -327,7 +366,10 @@ function SpecialBoardMeeting({ user }) {
             <select
               className="form-select agenda-select"
               value={year}
-              onChange={(e) => setYear(Number(e.target.value))}
+              onChange={(e) => {
+                setYear(Number(e.target.value));
+                setHighlightSlot(null);
+              }}
             >
               {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
             </select>
@@ -339,7 +381,11 @@ function SpecialBoardMeeting({ user }) {
               <select
                 className="form-select agenda-select"
                 value={occFilter}
-                onChange={(e) => { setOccFilter(e.target.value); setSelectedSuc(''); }}
+                onChange={(e) => {
+                  setOccFilter(e.target.value);
+                  setSelectedSuc('');
+                  setHighlightSlot(null);
+                }}
               >
                 <option value="">-- All Officials --</option>
                 {OCC_OFFICIALS.map((o) => (
@@ -364,7 +410,10 @@ function SpecialBoardMeeting({ user }) {
               <select
                 className="form-select agenda-select"
                 value={selectedSuc}
-                onChange={(e) => setSelectedSuc(e.target.value)}
+                onChange={(e) => {
+                  setSelectedSuc(e.target.value);
+                  setHighlightSlot(null);
+                }}
               >
                 <option value="">-- Select SUC --</option>
                 {filteredSucs.map((s) => <option key={s._id} value={s._id}>{s.sucName}</option>)}
@@ -399,6 +448,7 @@ function SpecialBoardMeeting({ user }) {
             onRefresh={fetchDocs}
             onViewFile={openPdf}
             user={user}
+            highlighted={highlightSlot === slotInfo.slot}
           />
         ))}
       </div>

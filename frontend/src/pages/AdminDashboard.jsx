@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getSucs, getOccOfficials, getDateBoardMeetings, createDateBoardMeeting, updateDateBoardMeeting, deleteDateBoardMeeting, getAgendaStatusAll } from '../services/api';
 import MeetingReminderModal from '../components/MeetingReminderModal';
 
 function AdminDashboard({ user }) {
+  const navigate = useNavigate();
   const [sucs, setSucs] = useState([]);
   const [officials, setOfficials] = useState([]);
   const [reminders, setReminders] = useState([]);
@@ -85,6 +87,32 @@ function AdminDashboard({ user }) {
       ) ? 'Uploaded' : 'Pending';
     }
     return 'Pending';
+  };
+
+  const handleStatusClick = (reminder) => {
+    if (!reminder.title) return;
+    const year = reminder.meetingDate ? reminder.meetingDate.split('-')[0] : new Date().getFullYear();
+    if (reminder.title.startsWith('Regular Board Meeting')) {
+      const match = reminder.title.match(/(1st|2nd|3rd|4th) Quarter/);
+      const quarter = match ? match[1] : null;
+      navigate('/admin/regular-board', {
+        state: {
+          sucAbbreviation: reminder.sucAbbreviation,
+          year: year,
+          quarter: quarter
+        }
+      });
+    } else if (reminder.title.startsWith('Special Board Meeting')) {
+      const match = reminder.title.match(/- (1st|2nd)$/);
+      const slot = match ? match[1] : null;
+      navigate('/admin/special-board', {
+        state: {
+          sucAbbreviation: reminder.sucAbbreviation,
+          year: year,
+          slot: slot
+        }
+      });
+    }
   };
 
   const years = [...new Set(reminders.filter(r => r.meetingDate).map(r => r.meetingDate.split('-')[0]))].sort((a, b) => b - a);
@@ -513,9 +541,20 @@ function AdminDashboard({ user }) {
                         <td>
                           {(() => {
                             const st = checkAgendaStatus(r);
-                            return st === 'Uploaded'
-                              ? <span className="badge bg-success"><i className="bi bi-check-circle me-1" />Uploaded</span>
-                              : <span className="badge bg-secondary"><i className="bi bi-clock me-1" />Pending</span>;
+                            const isLinkable = r.title && (r.title.startsWith('Regular Board Meeting') || r.title.startsWith('Special Board Meeting'));
+                            return (
+                              <span
+                                className={`badge ${st === 'Uploaded' ? 'bg-success' : 'bg-secondary'}`}
+                                style={isLinkable ? { cursor: 'pointer', transition: 'all 0.2s' } : {}}
+                                onClick={() => isLinkable && handleStatusClick(r)}
+                                title={isLinkable ? `Go to upload page for this meeting` : undefined}
+                                onMouseEnter={(e) => { if (isLinkable) { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.boxShadow = '0 2px 6px rgba(0,0,0,0.15)'; } }}
+                                onMouseLeave={(e) => { if (isLinkable) { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = 'none'; } }}
+                              >
+                                <i className={`bi ${st === 'Uploaded' ? 'bi-check-circle' : 'bi-clock'} me-1`} />
+                                {st}
+                              </span>
+                            );
                           })()}
                         </td>
                         <td>

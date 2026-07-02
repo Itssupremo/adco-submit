@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { getSucs, getAgendas, uploadAgendaFiles, resetAgenda } from '../services/api';
 import PdfViewer from '../components/PdfViewer';
 
@@ -125,7 +126,7 @@ function VersionDropdown({ history, onSelect }) {
   );
 }
 // ── Single quarter card ──────────────────────────────────────────────────────
-function QuarterCard({ quarter, agendaDoc, sucId, sucName, year, onRefresh, onViewFile, user }) {
+function QuarterCard({ quarter, agendaDoc, sucId, sucName, year, onRefresh, onViewFile, user, highlighted }) {
   const [proposedFile, setProposedFile] = useState(null);
   const [approvedFile, setApprovedFile] = useState(null);
   const [saving,     setSaving]     = useState(false);
@@ -210,7 +211,7 @@ function QuarterCard({ quarter, agendaDoc, sucId, sucName, year, onRefresh, onVi
   };
 
   return (
-    <div className="agenda-quarter-card">
+    <div className={`agenda-quarter-card${highlighted ? ' highlighted' : ''}`}>
       {/* Yellow header */}
       <div className="agenda-quarter-header">
         <span className="agenda-quarter-title">{quarter} Quarter</span>
@@ -335,6 +336,10 @@ function QuarterCard({ quarter, agendaDoc, sucId, sucName, year, onRefresh, onVi
 
 // ── Main page ────────────────────────────────────────────────────────────────
 function RegularBoardMeeting({ user }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const state = location.state || {};
+
   const [year,       setYear]       = useState(CURRENT_YEAR);
   const [sucs,       setSucs]       = useState([]);
   const [selectedSuc, setSelectedSuc] = useState('');
@@ -342,6 +347,7 @@ function RegularBoardMeeting({ user }) {
   const [agendas,    setAgendas]    = useState([]);
   const [loading,    setLoading]    = useState(false);
   const [pdfModal,   setPdfModal]   = useState({ open: false, url: '', title: '' });
+  const [highlightQuarter, setHighlightQuarter] = useState(null);
   const isUser = ['user', 'board_member'].includes(user?.role);
 
   const filteredSucs = occFilter ? sucs.filter((s) => s.occCode === occFilter) : sucs;
@@ -354,14 +360,46 @@ function RegularBoardMeeting({ user }) {
       .then((res) => {
         const list = res.data;
         setSucs(list);
-        // Auto-select the user's own SUC
-        if (['user', 'board_member'].includes(user?.role) && user?.sucAbbreviation) {
+        
+        let targetSucId = '';
+        if (state.sucAbbreviation) {
+          const match = list.find((s) => s.abbreviation === state.sucAbbreviation);
+          if (match) {
+            targetSucId = match._id;
+          }
+        }
+        
+        if (!targetSucId && ['user', 'board_member'].includes(user?.role) && user?.sucAbbreviation) {
           const match = list.find((s) => s.abbreviation === user.sucAbbreviation);
-          if (match) setSelectedSuc(match._id);
+          if (match) {
+            targetSucId = match._id;
+          }
+        }
+        
+        if (targetSucId) {
+          setSelectedSuc(targetSucId);
+        }
+
+        // Clear navigation state
+        if (state.sucAbbreviation || state.year || state.quarter) {
+          navigate(location.pathname, { replace: true, state: {} });
         }
       })
       .catch(() => {});
-  }, []);
+  }, [state.sucAbbreviation]);
+
+  useEffect(() => {
+    if (state.year) {
+      setYear(Number(state.year));
+    }
+    if (state.quarter) {
+      setHighlightQuarter(state.quarter);
+      const timer = setTimeout(() => {
+        setHighlightQuarter(null);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [state.year, state.quarter]);
 
   const fetchAgendas = async () => {
     if (!selectedSuc) return setAgendas([]);
@@ -402,7 +440,10 @@ function RegularBoardMeeting({ user }) {
             <select
               className="form-select agenda-select"
               value={year}
-              onChange={(e) => setYear(Number(e.target.value))}
+              onChange={(e) => {
+                setYear(Number(e.target.value));
+                setHighlightQuarter(null);
+              }}
             >
               {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
             </select>
@@ -413,7 +454,11 @@ function RegularBoardMeeting({ user }) {
               <select
                 className="form-select agenda-select"
                 value={occFilter}
-                onChange={(e) => { setOccFilter(e.target.value); setSelectedSuc(''); }}
+                onChange={(e) => {
+                  setOccFilter(e.target.value);
+                  setSelectedSuc('');
+                  setHighlightQuarter(null);
+                }}
               >
                 <option value="">-- All Officials --</option>
                 {OCC_OFFICIALS.map((o) => (
@@ -437,7 +482,10 @@ function RegularBoardMeeting({ user }) {
               <select
                 className="form-select agenda-select"
                 value={selectedSuc}
-                onChange={(e) => setSelectedSuc(e.target.value)}
+                onChange={(e) => {
+                  setSelectedSuc(e.target.value);
+                  setHighlightQuarter(null);
+                }}
               >
                 <option value="">-- Select SUC --</option>
                 {filteredSucs.map((s) => (
@@ -476,6 +524,7 @@ function RegularBoardMeeting({ user }) {
             onRefresh={fetchAgendas}
             onViewFile={openPdf}
             user={user}
+            highlighted={highlightQuarter === q}
           />
         ))}
       </div>

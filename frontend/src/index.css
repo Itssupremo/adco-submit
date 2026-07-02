@@ -1030,3 +1030,25 @@ code {
 }
 .empty-state-icon { font-size: 2.5rem; opacity: 0.4; }
 .empty-state-text { font-size: 0.88rem; font-weight: 500; }
+
+/* Pulse highlight for cards navigated from dashboard */
+@keyframes highlight-pulse {
+  0% {
+    box-shadow: 0 0 0 0px rgba(37, 99, 235, 0.7);
+    border-color: rgba(37, 99, 235, 1) !important;
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(37, 99, 235, 0);
+    border-color: rgba(37, 99, 235, 1) !important;
+  }
+  100% {
+    box-shadow: 0 0 0 0px rgba(37, 99, 235, 0);
+    border-color: var(--border-soft) !important;
+  }
+}
+
+.agenda-quarter-card.highlighted {
+  border: 2px solid #2563eb !important;
+  animation: highlight-pulse 2s infinite ease-in-out;
+  transform: scale(1.03) translateY(-4px) !important;
+}
