@@ -117,7 +117,7 @@ function SucAnalytics({ user }) {
   if (loading) {
     return (
       <div className="d-flex flex-column justify-content-center align-items-center" style={{ minHeight: 360, gap: 14 }}>
-        <div className="spinner-border" style={{ width: 44, height: 44, color: 'var(--navy)', borderWidth: 3 }} role="status">
+        <div className="spinner-border" style={{ width: 44, height: 44, color: 'var(--text-navy)', borderWidth: 3 }} role="status">
           <span className="visually-hidden">Loading…</span>
         </div>
         <span style={{ color: 'var(--text-muted)', fontWeight: 500, fontSize: '0.88rem' }}>Loading analytics…</span>
@@ -294,7 +294,7 @@ function SucAnalytics({ user }) {
 
       {/* Regular Board Meetings */}
       <div className="mb-5">
-        <h4 style={{ fontWeight: 800, color: 'var(--navy)', marginBottom: '1.25rem' }}>
+        <h4 style={{ fontWeight: 800, color: 'var(--text-navy)', marginBottom: '1.25rem' }}>
           <i className="bi bi-calendar-range me-2" style={{ color: 'var(--gold)' }} />
           Regular Board Meetings
         </h4>
@@ -310,7 +310,7 @@ function SucAnalytics({ user }) {
 
       {/* Special Board Meetings */}
       <div className="mt-5 pt-4 border-top mb-5">
-        <h4 style={{ fontWeight: 800, color: 'var(--navy)', marginBottom: '1.25rem' }}>
+        <h4 style={{ fontWeight: 800, color: 'var(--text-navy)', marginBottom: '1.25rem' }}>
           <i className="bi bi-star-fill me-2" style={{ color: 'var(--gold)' }} />
           Special Board Meetings
         </h4>

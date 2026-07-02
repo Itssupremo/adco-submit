@@ -104,9 +104,9 @@ function VersionDropdown({ history, onSelect }) {
         <ul
           style={{
             position: 'absolute', top: '100%', left: 0, zIndex: 1050,
-            background: '#fff', border: '1px solid #dee2e6', borderRadius: '4px',
+            background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '4px',
             minWidth: '220px', padding: '4px 0', margin: 0, listStyle: 'none',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+            boxShadow: 'var(--shadow-md)',
           }}
         >
           {[...history].reverse().map((h) => (

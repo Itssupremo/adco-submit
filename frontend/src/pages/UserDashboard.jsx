@@ -38,9 +38,9 @@ function UserDashboard({ user }) {
     today.setHours(0, 0, 0, 0);
     const meeting = new Date(dateStr + 'T00:00:00');
     const diff = Math.round((meeting - today) / (1000 * 60 * 60 * 24));
-    if (diff === 0) return { label: 'Today!', color: '#dc2626', bg: 'rgba(220,38,38,0.10)' };
-    if (diff > 0) return { label: `${diff} day${diff !== 1 ? 's' : ''} before board meeting`, color: '#b45309', bg: 'rgba(217,119,6,0.10)' };
-    return { label: `${Math.abs(diff)} day${Math.abs(diff) !== 1 ? 's' : ''} ago`, color: '#64748b', bg: 'rgba(100,116,139,0.10)' };
+    if (diff === 0) return { label: 'Today!', color: 'var(--danger-label-color)', bg: 'var(--danger-label-bg)' };
+    if (diff > 0) return { label: `${diff} day${diff !== 1 ? 's' : ''} before board meeting`, color: 'var(--warning-label-color)', bg: 'var(--warning-label-bg)' };
+    return { label: `${Math.abs(diff)} day${Math.abs(diff) !== 1 ? 's' : ''} ago`, color: 'var(--muted-label-color)', bg: 'var(--muted-label-bg)' };
   };
 
   const fetchReminders = async () => {
@@ -394,9 +394,9 @@ function UserDashboard({ user }) {
                           </div>
                         </td>
                         <td>
-                          {r.meetingType === 'Online' && <span className="badge" style={{ background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd' }}><i className="bi bi-camera-video-fill me-1" />Online</span>}
-                          {r.meetingType === 'Face-to-Face' && <span className="badge" style={{ background: '#fef08a', color: '#854d0e', border: '1px solid #fde047' }}><i className="bi bi-people-fill me-1" />Face-to-Face</span>}
-                          {r.meetingType === 'Hybrid' && <span className="badge" style={{ background: '#e9d5ff', color: '#6b21a8', border: '1px solid #d8b4fe' }}><i className="bi bi-diagram-2-fill me-1" />Hybrid</span>}
+                          {r.meetingType === 'Online' && <span className="badge" style={{ background: 'var(--online-bg)', color: 'var(--online-color)', border: '1px solid var(--online-color)30' }}><i className="bi bi-camera-video-fill me-1" />Online</span>}
+                          {r.meetingType === 'Face-to-Face' && <span className="badge" style={{ background: 'var(--f2f-bg)', color: 'var(--f2f-color)', border: '1px solid var(--f2f-color)30' }}><i className="bi bi-people-fill me-1" />Face-to-Face</span>}
+                          {r.meetingType === 'Hybrid' && <span className="badge" style={{ background: 'var(--hybrid-bg)', color: 'var(--hybrid-color)', border: '1px solid var(--hybrid-color)30' }}><i className="bi bi-diagram-2-fill me-1" />Hybrid</span>}
                         </td>
                         <td>
                           <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>

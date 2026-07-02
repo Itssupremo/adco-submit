@@ -45,9 +45,9 @@ function AdminDashboard({ user }) {
     today.setHours(0, 0, 0, 0);
     const meeting = new Date(dateStr + 'T00:00:00');
     const diff = Math.round((meeting - today) / (1000 * 60 * 60 * 24));
-    if (diff === 0) return { label: 'Today!', color: '#dc2626', bg: 'rgba(220,38,38,0.10)' };
-    if (diff > 0) return { label: `${diff} day${diff !== 1 ? 's' : ''} before board meeting`, color: '#b45309', bg: 'rgba(217,119,6,0.10)' };
-    return { label: `${Math.abs(diff)} day${Math.abs(diff) !== 1 ? 's' : ''} ago`, color: '#64748b', bg: 'rgba(100,116,139,0.10)' };
+    if (diff === 0) return { label: 'Today!', color: 'var(--danger-label-color)', bg: 'var(--danger-label-bg)' };
+    if (diff > 0) return { label: `${diff} day${diff !== 1 ? 's' : ''} before board meeting`, color: 'var(--warning-label-color)', bg: 'var(--warning-label-bg)' };
+    return { label: `${Math.abs(diff)} day${Math.abs(diff) !== 1 ? 's' : ''} ago`, color: 'var(--muted-label-color)', bg: 'var(--muted-label-bg)' };
   };
 
   const fetchSucs = async () => {
@@ -482,7 +482,7 @@ function AdminDashboard({ user }) {
                           <td style={{ fontSize: '0.82rem' }}>{sucRec ? sucRec.chedOfficial : '—'}</td>
                         )}
                         <td>
-                          <strong style={{ color: 'var(--navy)' }}>{r.sucAbbreviation}</strong>
+                          <strong style={{ color: 'var(--text-navy)' }}>{r.sucAbbreviation}</strong>
                           {r.sucName && <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{r.sucName}</div>}
                         </td>
                         <td>
@@ -521,9 +521,9 @@ function AdminDashboard({ user }) {
                             <span
                               className="badge"
                               style={{
-                                background: r.meetingType === 'Online' ? 'rgba(2,132,199,0.12)' : r.meetingType === 'Hybrid' ? 'rgba(124,58,237,0.12)' : 'rgba(5,150,105,0.12)',
-                                color: r.meetingType === 'Online' ? '#0369a1' : r.meetingType === 'Hybrid' ? '#6d28d9' : '#047857',
-                                border: `1px solid ${r.meetingType === 'Online' ? 'rgba(2,132,199,0.25)' : r.meetingType === 'Hybrid' ? 'rgba(124,58,237,0.25)' : 'rgba(5,150,105,0.25)'}`,
+                                background: r.meetingType === 'Online' ? 'var(--online-bg)' : r.meetingType === 'Hybrid' ? 'var(--hybrid-bg)' : 'var(--f2f-bg)',
+                                color: r.meetingType === 'Online' ? 'var(--online-color)' : r.meetingType === 'Hybrid' ? 'var(--hybrid-color)' : 'var(--f2f-color)',
+                                border: `1px solid ${r.meetingType === 'Online' ? 'var(--online-color)30' : r.meetingType === 'Hybrid' ? 'var(--hybrid-color)30' : 'var(--f2f-color)30'}`,
                               }}
                             >
                               <i className={`bi ${r.meetingType === 'Online' ? 'bi-camera-video-fill' : r.meetingType === 'Hybrid' ? 'bi-arrow-left-right' : 'bi-people-fill'} me-1`} />

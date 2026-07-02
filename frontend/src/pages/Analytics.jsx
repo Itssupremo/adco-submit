@@ -123,7 +123,7 @@ function Analytics({ user }) {
   if (loading) {
     return (
       <div className="d-flex flex-column justify-content-center align-items-center" style={{ minHeight: 360, gap: 14 }}>
-        <div className="spinner-border" style={{ width: 44, height: 44, color: 'var(--navy)', borderWidth: 3 }} role="status">
+        <div className="spinner-border" style={{ width: 44, height: 44, color: 'var(--text-navy)', borderWidth: 3 }} role="status">
           <span className="visually-hidden">Loading…</span>
         </div>
         <span style={{ color: 'var(--text-muted)', fontWeight: 500, fontSize: '0.88rem' }}>Loading analytics…</span>
@@ -339,7 +339,7 @@ function Analytics({ user }) {
       {/* Regular Board Meetings Section */}
       <div className="mb-5">
         <div className="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
-          <h4 style={{ fontWeight: 800, color: 'var(--navy)', margin: 0 }}>
+          <h4 style={{ fontWeight: 800, color: 'var(--text-navy)', margin: 0 }}>
             <i className="bi bi-calendar-range me-2" style={{ color: 'var(--gold)' }} />
             Regular Board Meetings
           </h4>
@@ -358,9 +358,9 @@ function Analytics({ user }) {
                     fontWeight: 600,
                     fontSize: '0.82rem',
                     padding: '6px 14px',
-                    backgroundColor: isActive ? color : '#fff',
+                    backgroundColor: isActive ? color : 'var(--surface)',
                     color: isActive ? '#fff' : 'var(--text-secondary)',
-                    border: `1px solid ${isActive ? color : '#e2e8f0'}`,
+                    border: `1px solid ${isActive ? color : 'var(--border)'}`,
                     boxShadow: isActive ? `0 4px 10px ${color}2d` : 'none',
                     transition: 'all 0.2s ease',
                   }}
@@ -385,14 +385,14 @@ function Analytics({ user }) {
         {/* Regular Detailed Cards Side-by-Side */}
         <div className="row g-4">
           <div className="col-lg-6">
-            <h5 className="mb-3" style={{ fontWeight: 700, color: 'var(--navy)', fontSize: '0.95rem' }}>
+            <h5 className="mb-3" style={{ fontWeight: 700, color: 'var(--text-navy)', fontSize: '0.95rem' }}>
               <i className="bi bi-list-check me-2" style={{ color: 'var(--gold)' }} />
               Detailed SUC Upload Status (Regular Agendas)
             </h5>
             {renderDetailedCard('regular', 'quarter', selectedQuarter, QUARTER_COLORS[quarterIndex])}
           </div>
           <div className="col-lg-6">
-            <h5 className="mb-3" style={{ fontWeight: 700, color: 'var(--navy)', fontSize: '0.95rem' }}>
+            <h5 className="mb-3" style={{ fontWeight: 700, color: 'var(--text-navy)', fontSize: '0.95rem' }}>
               <i className="bi bi-list-check me-2" style={{ color: 'var(--gold)' }} />
               Detailed SUC Upload Status (Regular Minutes)
             </h5>
@@ -403,7 +403,7 @@ function Analytics({ user }) {
 
       {/* Special Board Meetings Section */}
       <div className="mt-5 pt-4 border-top mb-5">
-        <h4 style={{ fontWeight: 800, color: 'var(--navy)', marginBottom: '1.5rem' }}>
+        <h4 style={{ fontWeight: 800, color: 'var(--text-navy)', marginBottom: '1.5rem' }}>
           <i className="bi bi-star-fill me-2" style={{ color: 'var(--gold)' }} />
           Special Board Meetings
         </h4>
@@ -421,7 +421,7 @@ function Analytics({ user }) {
         {/* Special Detailed Cards Side-by-Side */}
         <div className="row g-4">
           <div className="col-lg-6">
-            <h5 className="mb-3" style={{ fontWeight: 700, color: 'var(--navy)', fontSize: '0.95rem' }}>
+            <h5 className="mb-3" style={{ fontWeight: 700, color: 'var(--text-navy)', fontSize: '0.95rem' }}>
               <i className="bi bi-list-check me-2" style={{ color: 'var(--gold)' }} />
               Detailed SUC Upload Status (Special Agendas)
             </h5>
@@ -434,7 +434,7 @@ function Analytics({ user }) {
             </div>
           </div>
           <div className="col-lg-6">
-            <h5 className="mb-3" style={{ fontWeight: 700, color: 'var(--navy)', fontSize: '0.95rem' }}>
+            <h5 className="mb-3" style={{ fontWeight: 700, color: 'var(--text-navy)', fontSize: '0.95rem' }}>
               <i className="bi bi-list-check me-2" style={{ color: 'var(--gold)' }} />
               Detailed SUC Upload Status (Special Minutes)
             </h5>

@@ -31,7 +31,7 @@ const PAGE_TITLES = {
   '/my-account': 'My Account',
 };
 
-function AuthenticatedLayout({ user, onLogout, sidebarOpen, setSidebarOpen, children }) {
+function AuthenticatedLayout({ user, onLogout, sidebarOpen, setSidebarOpen, darkMode, toggleDarkMode, children }) {
   const location = useLocation();
   const title = PAGE_TITLES[location.pathname] || 'e-Agenda System';
   const toggle = () => setSidebarOpen((o) => !o);
@@ -46,6 +46,14 @@ function AuthenticatedLayout({ user, onLogout, sidebarOpen, setSidebarOpen, chil
             <i className="bi bi-list" />
           </button>
           <span className="app-topbar-title">{title}</span>
+          <button
+            className="darkmode-toggle"
+            onClick={toggleDarkMode}
+            title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            id="darkmode-btn"
+          >
+            <i className={`bi ${darkMode ? 'bi-sun-fill' : 'bi-moon-stars-fill'}`} />
+          </button>
           <div className="app-topbar-user d-none d-md-flex">
             <i className="bi bi-person-circle" />
             <span>{user.fullname}</span>
@@ -62,6 +70,16 @@ function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 992);
+  const [darkMode, setDarkMode] = useState(() => {
+    return localStorage.getItem('darkMode') === 'true';
+  });
+
+  const toggleDarkMode = () => setDarkMode((prev) => !prev);
+
+  useEffect(() => {
+    localStorage.setItem('darkMode', darkMode);
+    document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+  }, [darkMode]);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -123,6 +141,8 @@ function App() {
           onLogout={handleLogout}
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
+          darkMode={darkMode}
+          toggleDarkMode={toggleDarkMode}
         >
           <Routes>
             {/* My Account — all roles */}

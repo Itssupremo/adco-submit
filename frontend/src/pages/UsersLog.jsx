@@ -212,7 +212,7 @@ function UsersLog({ user: currentUser }) {
 
           {loading ? (
             <div className="d-flex flex-column justify-content-center align-items-center py-5" style={{ minHeight: 300, gap: 12 }}>
-              <div className="spinner-border" style={{ color: 'var(--navy)', width: 40, height: 40 }} role="status">
+              <div className="spinner-border" style={{ color: 'var(--text-navy)', width: 40, height: 40 }} role="status">
                 <span className="visually-hidden">Loading…</span>
               </div>
               <span style={{ color: 'var(--text-muted)', fontSize: '0.88rem', fontWeight: 500 }}>Loading activity logs…</span>
@@ -307,7 +307,7 @@ function UsersLog({ user: currentUser }) {
 
         {/* Pagination */}
         {!loading && totalPages > 1 && (
-          <div className="card-footer" style={{ background: '#fff', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.9rem 1.25rem' }}>
+          <div className="card-footer" style={{ background: 'var(--surface)', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.9rem 1.25rem' }}>
             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 500 }}>
               Showing {startIndex + 1}–{Math.min(startIndex + itemsPerPage, filteredLogs.length)} of {filteredLogs.length}
             </span>
