@@ -8,9 +8,13 @@
 ### Environment
 Create [backend/.env.example](c:/Users/Localuser/IanGwapo/abbi-submit/backend/.env.example) as `backend/.env` and fill in your values.
 
+Create `frontend/.env` from `frontend/.env.example` when the frontend is deployed separately from the backend.
+
 For DigitalOcean Spaces file storage, this project now accepts either `SPACES_*` or `S3_*` variables.
 
 For MongoDB, this project accepts `MONGODB_URI`, `DATABASE_URL`, or `MONGO_URI`.
+
+For a Vercel frontend that talks to a DigitalOcean backend, set `VITE_API_BASE_URL` to your DigitalOcean backend URL, usually `https://your-backend-domain/api`.
 
 ### Prerequisites
 - Node.js (v18+)
@@ -35,6 +39,17 @@ cd frontend
 npm run dev
 ```
 Frontend runs on **http://localhost:3000**
+
+## Deployment
+
+### Vercel frontend
+- Public site: `https://adco-submit.vercel.app`
+- Set `VITE_API_BASE_URL` in Vercel to your DigitalOcean backend URL, for example `https://your-backend-domain/api`
+
+### DigitalOcean backend
+- Set `ALLOWED_ORIGINS=https://adco-submit.vercel.app,http://localhost:5173,http://localhost:3000`
+- Keep `MONGODB_URI` pointed at your DigitalOcean MongoDB cluster
+- Fill `SPACES_KEY` and `SPACES_SECRET` so uploads are stored in DigitalOcean Spaces
 
 ## Demo Credentials
 | Role  | Username | Password  |
