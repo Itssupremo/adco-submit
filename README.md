@@ -1,4 +1,4 @@
-# e-Agenda System
+# USM BoardHUB
 
 --Contact Ian Christopher N. Mangubat
 --www.facebook.com/supremo.ian.7
