@@ -1,4 +1,5 @@
 const fs = require('fs/promises');
+const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
@@ -35,7 +36,9 @@ if (isS3Configured) {
   s3Client = new S3Client(config);
 }
 
-const localUploadRoot = path.join(__dirname, '..', 'uploads');
+const localUploadRoot = process.env.LOCAL_UPLOAD_ROOT
+  ? path.resolve(process.env.LOCAL_UPLOAD_ROOT)
+  : path.join(os.tmpdir(), 'usm-boardhub-uploads');
 
 const sanitizeBaseName = (filename) => {
   const extIndex = filename.lastIndexOf('.');
@@ -54,7 +57,7 @@ const buildStorageKey = (filename) => {
   return `uploads/${Date.now()}-${crypto.randomUUID()}-${cleanBaseName}${extension}`;
 };
 
-const getLocalFilePath = (key) => path.join(__dirname, '..', key.replace(/\//g, path.sep));
+const getLocalFilePath = (key) => path.join(localUploadRoot, key.replace(/^uploads\//, '').replace(/\//g, path.sep));
 
 const ensureLocalUploadDir = async (key) => {
   const targetPath = getLocalFilePath(key);
