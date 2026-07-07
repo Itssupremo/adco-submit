@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import PdfViewer from '../components/PdfViewer';
 import {
@@ -13,58 +13,184 @@ import {
   updateSubmissionReview,
 } from '../services/api';
 
-const PROPOSAL_TYPES = ['Academic', 'Research & Extension', 'Administrative', 'Finance', 'Projects', 'MOH/ MOU/ Deed of Donation/ Usufruct', 'For Information'];
-const REVIEW_FIELDS = [
+const PROPOSAL_TYPES = [
+  'Academic',
+  'Research & Extension',
+  'Administrative',
+  'Finance',
+  'Projects',
+  'Production',
+  'Usufruct',
+  'Deed of Donation',
+  'MOA/MOU (Academic)',
+  'MOA/MOU (Research, Development, and Extension)',
+  'MOA/MOU (Finance)',
+  'MOA/MOU (Administrative)',
+];
+
+const IAS_ENDORSEMENT_OPTIONS = [
+  'for Capital Outlay Php 15 Million and below',
+  'for MOOE Php 5 Million and below',
+];
+
+const SINGLE_FIELDS = [
   'executiveBriefPdf',
   'executiveBriefWord',
   'proposalPdf',
   'proposalWord',
-  'presentationPdf',
-  'forInformationProposalPdf',
+  'summaryMatrixPdf',
+  'copyOfMoaMouPdf',
+  'copyOfUsufructPdf',
+  'copyOfDeedOfDonationPdf',
   'legalEndorsementPdf',
-  'vpafFanCertificationPdf',
-  'vpaaAcademicCouncilPdf',
-  'vprgesProductionCouncilPdf',
-  'vprdeUrdecPdf',
 ];
+
+const MULTI_FIELDS = [
+  'supportingDocuments',
+  'vpafFanCertificationPdfs',
+  'vpaaAdministrativeCouncilPdfs',
+  'vprgesProductionCouncilPdfs',
+  'vprdeUrdecPdfs',
+  'officeOfPresidentPdfs',
+  'iasEndorsementPdfs',
+];
+
+const LEGACY_ARRAY_COMPATIBILITY = {
+  vpafFanCertificationPdfs: 'vpafFanCertificationPdf',
+  vpaaAdministrativeCouncilPdfs: 'vpaaAcademicCouncilPdf',
+  vprgesProductionCouncilPdfs: 'vprgesProductionCouncilPdf',
+  vprdeUrdecPdfs: 'vprdeUrdecPdf',
+};
+
+const FILE_LABELS = {
+  executiveBriefPdf: 'Executive Brief PDF',
+  executiveBriefWord: 'Executive Brief Word',
+  proposalPdf: 'Proposal PDF',
+  proposalWord: 'Proposal Word',
+  summaryMatrixPdf: 'Summary Matrix',
+  copyOfMoaMouPdf: 'Copy of MOA/MOU',
+  copyOfUsufructPdf: 'Copy of Usufruct',
+  copyOfDeedOfDonationPdf: 'Copy of Deed of Donation',
+  legalEndorsementPdf: 'Legal Endorsement',
+  supportingDocuments: 'Supporting Document',
+  vpafFanCertificationPdfs: 'VPAF / FMS Certification',
+  vpaaAdministrativeCouncilPdfs: 'VPAA / Administrative Council',
+  vprgesProductionCouncilPdfs: 'VPRGES / Production Council',
+  vprdeUrdecPdfs: 'VPRDE / URDEC',
+  officeOfPresidentPdfs: 'Office of the President',
+  iasEndorsementPdfs: 'IAS Endorsement',
+};
+
+const PROPOSAL_RULES = {
+  Academic: {
+    visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
+    visibleMulti: ['supportingDocuments', 'vpaaAdministrativeCouncilPdfs'],
+    requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
+    requiredMulti: ['supportingDocuments', 'vpaaAdministrativeCouncilPdfs'],
+  },
+  'Research & Extension': {
+    visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
+    visibleMulti: ['supportingDocuments', 'vprdeUrdecPdfs'],
+    requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
+    requiredMulti: ['supportingDocuments', 'vprdeUrdecPdfs'],
+  },
+  Administrative: {
+    visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
+    visibleMulti: ['supportingDocuments', 'vpafFanCertificationPdfs'],
+    requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
+    requiredMulti: ['supportingDocuments', 'vpafFanCertificationPdfs'],
+  },
+  Finance: {
+    visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
+    visibleMulti: ['supportingDocuments', 'vpafFanCertificationPdfs'],
+    requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
+    requiredMulti: ['supportingDocuments', 'vpafFanCertificationPdfs'],
+  },
+  Projects: {
+    visibleSingle: ['executiveBriefPdf', 'executiveBriefWord'],
+    visibleMulti: ['supportingDocuments', 'vpafFanCertificationPdfs', 'iasEndorsementPdfs'],
+    requiredSingle: ['executiveBriefPdf', 'executiveBriefWord'],
+    requiredMulti: ['supportingDocuments', 'vpafFanCertificationPdfs', 'iasEndorsementPdfs'],
+    requireIasCategory: true,
+  },
+  Production: {
+    visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
+    visibleMulti: ['supportingDocuments', 'vprgesProductionCouncilPdfs'],
+    requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
+    requiredMulti: ['supportingDocuments', 'vprgesProductionCouncilPdfs'],
+  },
+  Usufruct: {
+    visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'copyOfUsufructPdf', 'legalEndorsementPdf'],
+    visibleMulti: [],
+    requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'copyOfUsufructPdf', 'legalEndorsementPdf'],
+    requiredMulti: [],
+  },
+  'Deed of Donation': {
+    visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'copyOfDeedOfDonationPdf', 'legalEndorsementPdf'],
+    visibleMulti: ['vpafFanCertificationPdfs'],
+    requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'copyOfDeedOfDonationPdf', 'legalEndorsementPdf'],
+    requiredMulti: ['vpafFanCertificationPdfs'],
+  },
+  'MOA/MOU (Academic)': {
+    visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'summaryMatrixPdf', 'copyOfMoaMouPdf', 'legalEndorsementPdf'],
+    visibleMulti: ['vpafFanCertificationPdfs', 'vpaaAdministrativeCouncilPdfs'],
+    requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'summaryMatrixPdf', 'copyOfMoaMouPdf', 'legalEndorsementPdf'],
+    requiredMulti: ['vpafFanCertificationPdfs', 'vpaaAdministrativeCouncilPdfs'],
+  },
+  'MOA/MOU (Research, Development, and Extension)': {
+    visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'summaryMatrixPdf', 'copyOfMoaMouPdf', 'legalEndorsementPdf'],
+    visibleMulti: ['vpafFanCertificationPdfs', 'vprdeUrdecPdfs'],
+    requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'summaryMatrixPdf', 'copyOfMoaMouPdf', 'legalEndorsementPdf'],
+    requiredMulti: ['vpafFanCertificationPdfs', 'vprdeUrdecPdfs'],
+  },
+  'MOA/MOU (Finance)': {
+    visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'summaryMatrixPdf', 'copyOfMoaMouPdf', 'legalEndorsementPdf'],
+    visibleMulti: ['vpafFanCertificationPdfs'],
+    requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'summaryMatrixPdf', 'copyOfMoaMouPdf', 'legalEndorsementPdf'],
+    requiredMulti: ['vpafFanCertificationPdfs'],
+  },
+  'MOA/MOU (Administrative)': {
+    visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'summaryMatrixPdf', 'copyOfMoaMouPdf', 'legalEndorsementPdf'],
+    visibleMulti: ['vpafFanCertificationPdfs'],
+    requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'summaryMatrixPdf', 'copyOfMoaMouPdf', 'legalEndorsementPdf'],
+    requiredMulti: ['vpafFanCertificationPdfs'],
+  },
+};
 
 const createInitialForm = (collegeUnit = '') => ({
   collegeUnit,
   documentTitle: '',
   proposalType: 'Academic',
+  iasEndorsementCategory: '',
   executiveBriefPdf: null,
   executiveBriefWord: null,
   proposalPdf: null,
   proposalWord: null,
-  presentationPdf: null,
-  forInformationProposalPdf: null,
-  supportingDocuments: [],
+  summaryMatrixPdf: null,
+  copyOfMoaMouPdf: null,
+  copyOfUsufructPdf: null,
+  copyOfDeedOfDonationPdf: null,
   legalEndorsementPdf: null,
-  vpafFanCertificationPdf: null,
-  vpaaAcademicCouncilPdf: null,
-  vprgesProductionCouncilPdf: null,
-  vprdeUrdecPdf: null,
+  supportingDocuments: [],
+  vpafFanCertificationPdfs: [],
+  vpaaAdministrativeCouncilPdfs: [],
+  vprgesProductionCouncilPdfs: [],
+  vprdeUrdecPdfs: [],
+  officeOfPresidentPdfs: [],
+  iasEndorsementPdfs: [],
 });
 
 const createFormFromSubmission = (submission) => ({
-  collegeUnit: submission?.collegeUnit || submission?.councilName || '',
+  ...createInitialForm(submission?.collegeUnit || submission?.councilName || ''),
   documentTitle: submission?.documentTitle || '',
   proposalType: submission?.proposalType || 'Academic',
-  executiveBriefPdf: null,
-  executiveBriefWord: null,
-  proposalPdf: null,
-  proposalWord: null,
-  presentationPdf: null,
-  forInformationProposalPdf: null,
-  supportingDocuments: [],
-  legalEndorsementPdf: null,
-  vpafFanCertificationPdf: null,
-  vpaaAcademicCouncilPdf: null,
-  vprgesProductionCouncilPdf: null,
-  vprdeUrdecPdf: null,
+  iasEndorsementCategory: submission?.iasEndorsementCategory || '',
 });
 
 const fileExists = (file) => Boolean(file && (file.filename || file.s3Key));
+const getProposalTypeLabel = (submission) => submission.proposalType;
+const getProposalRule = (proposalType = '') => PROPOSAL_RULES[proposalType] || PROPOSAL_RULES.Academic;
+
 const isPdfFile = (file) => {
   if (!file) return false;
   const name = String(file.filename || '').toLowerCase();
@@ -72,8 +198,6 @@ const isPdfFile = (file) => {
   if (name.endsWith('.doc') || name.endsWith('.docx')) return false;
   return file.contentType === 'application/pdf';
 };
-
-const getProposalTypeLabel = (submission) => submission.proposalType;
 
 const getSubmissionVersions = (submission) => {
   const previous = Array.isArray(submission?.packetHistory) ? submission.packetHistory.map((item) => item.version) : [];
@@ -94,35 +218,58 @@ const createReviewEntry = (value = {}) => ({
   remarks: String(value.remarks || ''),
 });
 
+const getArrayFiles = (files = {}, key) => {
+  if (Array.isArray(files[key]) && files[key].length > 0) return files[key].filter(fileExists);
+  const legacyKey = LEGACY_ARRAY_COMPATIBILITY[key];
+  return legacyKey && fileExists(files[legacyKey]) ? [files[legacyKey]] : [];
+};
+
 const getSubmissionDocuments = (submission) => {
-  const files = submission.files || {};
+  const files = submission?.files || {};
   const items = [];
 
-  if (fileExists(files.executiveBriefPdf)) items.push({ label: 'Executive Brief PDF', key: 'executiveBriefPdf', file: files.executiveBriefPdf });
-  if (fileExists(files.executiveBriefWord)) items.push({ label: 'Executive Brief Word', key: 'executiveBriefWord', file: files.executiveBriefWord });
-  if (fileExists(files.proposalPdf)) items.push({ label: 'Proposal PDF', key: 'proposalPdf', file: files.proposalPdf });
-  if (fileExists(files.proposalWord)) items.push({ label: 'Proposal Word', key: 'proposalWord', file: files.proposalWord });
-  if (fileExists(files.presentationPdf)) items.push({ label: 'Presentation PDF', key: 'presentationPdf', file: files.presentationPdf });
-  if (fileExists(files.forInformationProposalPdf)) items.push({ label: 'For Information Proposal PDF', key: 'forInformationProposalPdf', file: files.forInformationProposalPdf });
-  if (fileExists(files.legalEndorsementPdf)) items.push({ label: 'Legal Endorsement', key: 'legalEndorsementPdf', file: files.legalEndorsementPdf });
-  if (fileExists(files.vpafFanCertificationPdf)) items.push({ label: 'VPAF / FMS Certification', key: 'vpafFanCertificationPdf', file: files.vpafFanCertificationPdf });
-  if (fileExists(files.vpaaAcademicCouncilPdf)) items.push({ label: 'VPAA / Administrative Council', key: 'vpaaAcademicCouncilPdf', file: files.vpaaAcademicCouncilPdf });
-  if (fileExists(files.vprgesProductionCouncilPdf)) items.push({ label: 'VPRGES / Production Council', key: 'vprgesProductionCouncilPdf', file: files.vprgesProductionCouncilPdf });
-  if (fileExists(files.vprdeUrdecPdf)) items.push({ label: 'VPRDE / URDEC', key: 'vprdeUrdecPdf', file: files.vprdeUrdecPdf });
-  (files.supportingDocuments || []).forEach((file, index) => {
-    if (fileExists(file)) items.push({ label: `Supporting Document ${index + 1}`, key: 'supportingDocuments', index, file });
+  SINGLE_FIELDS.forEach((field) => {
+    if (fileExists(files[field])) {
+      items.push({ label: FILE_LABELS[field], key: field, file: files[field] });
+    }
+  });
+
+  MULTI_FIELDS.forEach((field) => {
+    getArrayFiles(files, field).forEach((file, index) => {
+      items.push({
+        label: `${FILE_LABELS[field]} ${index + 1}`,
+        key: field,
+        index,
+        file,
+      });
+    });
   });
 
   return items;
 };
 
+const getReviewEntryValue = (checklist, key, index = null) => {
+  if (MULTI_FIELDS.includes(key)) {
+    return checklist?.[key]?.[index] || createReviewEntry();
+  }
+  return checklist?.[key] || createReviewEntry();
+};
+
+const createEmptyReviewChecklist = () => {
+  const checklist = {};
+  SINGLE_FIELDS.forEach((field) => {
+    checklist[field] = createReviewEntry();
+  });
+  MULTI_FIELDS.forEach((field) => {
+    checklist[field] = [];
+  });
+  return checklist;
+};
+
 const getSubmissionReviewItems = (submission) => {
   const checklist = submission?.reviewChecklist || {};
   return getSubmissionDocuments(submission).map((doc) => {
-    const review = doc.key === 'supportingDocuments'
-      ? checklist.supportingDocuments?.[doc.index] || createReviewEntry()
-      : checklist[doc.key] || createReviewEntry();
-
+    const review = getReviewEntryValue(checklist, doc.key, doc.index);
     return {
       ...doc,
       checked: Boolean(review.checked),
@@ -138,35 +285,90 @@ const hasReviewFeedback = (submission) => {
 };
 
 const isReviewChecklistComplete = (reviewChecklist = {}, files = {}) => {
-  return getSubmissionDocuments({ files }).every((doc) => {
-    const review = doc.key === 'supportingDocuments'
-      ? reviewChecklist.supportingDocuments?.[doc.index]
-      : reviewChecklist[doc.key];
-    return Boolean(review?.checked);
-  });
+  return getSubmissionDocuments({ files }).every((doc) => Boolean(getReviewEntryValue(reviewChecklist, doc.key, doc.index)?.checked));
 };
 
 const createReviewDraft = (submission) => {
-  const checklist = { supportingDocuments: [] };
-  REVIEW_FIELDS.forEach((field) => {
-    checklist[field] = createReviewEntry(submission?.reviewChecklist?.[field]);
+  const reviewChecklist = createEmptyReviewChecklist();
+  SINGLE_FIELDS.forEach((field) => {
+    reviewChecklist[field] = createReviewEntry(submission?.reviewChecklist?.[field]);
   });
-  const supportingCount = (submission?.files?.supportingDocuments || []).filter(fileExists).length;
-  checklist.supportingDocuments = Array.from({ length: supportingCount }, (_, index) => createReviewEntry(submission?.reviewChecklist?.supportingDocuments?.[index]));
+  MULTI_FIELDS.forEach((field) => {
+    const fileCount = getArrayFiles(submission?.files || {}, field).length;
+    reviewChecklist[field] = Array.from({ length: fileCount }, (_, index) => createReviewEntry(submission?.reviewChecklist?.[field]?.[index]));
+  });
   return {
     remarks: String(submission?.remarks || ''),
-    reviewChecklist: checklist,
+    reviewChecklist,
   };
 };
 
-function FileInput({ label, accept, required = false, multiple = false, helper = '', currentFileName = '', preserveOnEmpty = false, onChange }) {
+function FileInput({
+  label,
+  accept,
+  required = false,
+  multiple = false,
+  helper = '',
+  currentFileName = '',
+  currentFileNames = [],
+  selectedFileNames = [],
+  preserveOnEmpty = false,
+  onChange,
+}) {
+  const inputRef = useRef(null);
+  const [dragging, setDragging] = useState(false);
+  const displayNames = selectedFileNames.length > 0
+    ? selectedFileNames
+    : (multiple ? currentFileNames : (currentFileName ? [currentFileName] : []));
+
+  const handleFiles = (fileList) => {
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+    onChange(files, multiple ? files : files[0]);
+  };
+
   return (
-    <div>
+    <div className="submission-file-input">
       <label className="form-label mb-1">{label}{required ? ' *' : ''}</label>
-      <input className="form-control" type="file" accept={accept} multiple={multiple} onChange={onChange} required={required} />
+      <div
+        className={`agenda-dropzone${dragging ? ' dragging' : ''}${displayNames.length > 0 ? ' has-file' : ''}`}
+        onClick={() => inputRef.current?.click()}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragging(false);
+          handleFiles(e.dataTransfer.files);
+        }}
+      >
+        {displayNames.length > 0 ? (
+          <span className="agenda-dropzone-file">
+            <i className="bi bi-file-earmark-arrow-up me-1" />
+            {multiple ? displayNames.join(', ') : displayNames[0]}
+          </span>
+        ) : (
+          <span className="agenda-dropzone-hint">
+            <i className="bi bi-upload me-1" />
+            Drag & drop {accept.includes('pdf') && !accept.includes('doc') ? 'PDF' : 'file'} here or click to browse
+          </span>
+        )}
+        <input
+          ref={inputRef}
+          className="d-none"
+          type="file"
+          accept={accept}
+          multiple={multiple}
+          required={required && displayNames.length === 0}
+          onChange={(e) => handleFiles(e.target.files)}
+        />
+      </div>
       {helper ? <div className="small text-muted mt-1">{helper}</div> : null}
-      {currentFileName ? <div className="small text-muted mt-1">Current file: {currentFileName}</div> : null}
-      {preserveOnEmpty ? <div className="small text-muted mt-1">Leave this empty to keep the current uploaded file.</div> : null}
+      {!multiple && currentFileName ? <div className="small text-muted mt-1">Current file: {currentFileName}</div> : null}
+      {multiple && currentFileNames.length > 0 ? <div className="small text-muted mt-1">Current files: {currentFileNames.join(', ')}</div> : null}
+      {preserveOnEmpty ? <div className="small text-muted mt-1">Leave this empty to keep the current uploaded file(s).</div> : null}
     </div>
   );
 }
@@ -181,7 +383,8 @@ function SubmissionManagement({ user, councilView = 'history' }) {
   const [current, setCurrent] = useState(null);
   const [editingSubmission, setEditingSubmission] = useState(null);
   const [pdfModal, setPdfModal] = useState({ open: false, url: '', title: '' });
-  const [reviewModal, setReviewModal] = useState({ open: false, mode: 'view', submission: null, remarks: '', reviewChecklist: { supportingDocuments: [] } });
+  const [reviewModal, setReviewModal] = useState({ open: false, mode: 'view', submission: null, remarks: '', reviewChecklist: createEmptyReviewChecklist() });
+  const [submitState, setSubmitState] = useState({ loading: false, successOpen: false, successMessage: '' });
 
   const load = () => {
     getSubmissions(filters)
@@ -214,7 +417,7 @@ function SubmissionManagement({ user, councilView = 'history' }) {
     }
   }, [user.role, councilView, location.state, location.pathname, navigate, submissions]);
 
-  const isForInformation = form.proposalType === 'For Information';
+  const proposalRule = getProposalRule(form.proposalType);
 
   const setField = (field, value) => {
     setForm((prev) => ({
@@ -242,45 +445,51 @@ function SubmissionManagement({ user, councilView = 'history' }) {
     setMessage('');
   };
 
+  const resetCouncilForm = () => {
+    setMessage('');
+    setForm(editingSubmission ? createFormFromSubmission(editingSubmission) : createInitialForm(user?.councilName || ''));
+  };
+
+  const getSelectedFileNames = (field) => {
+    const value = form[field];
+    if (Array.isArray(value)) return value.map((file) => file?.name).filter(Boolean);
+    return value?.name ? [value.name] : [];
+  };
+
   const submitCouncilForm = async (e) => {
     e.preventDefault();
+    setSubmitState((prev) => ({ ...prev, loading: true, successOpen: false, successMessage: '' }));
     const payload = new FormData();
     payload.append('collegeUnit', form.collegeUnit);
     payload.append('documentTitle', form.documentTitle);
     payload.append('proposalType', form.proposalType);
+    payload.append('iasEndorsementCategory', form.iasEndorsementCategory || '');
 
-    [
-      'executiveBriefPdf',
-      'executiveBriefWord',
-      'proposalPdf',
-      'proposalWord',
-      'presentationPdf',
-      'forInformationProposalPdf',
-      'legalEndorsementPdf',
-      'vpafFanCertificationPdf',
-      'vpaaAcademicCouncilPdf',
-      'vprgesProductionCouncilPdf',
-      'vprdeUrdecPdf',
-    ].forEach((field) => {
+    SINGLE_FIELDS.forEach((field) => {
       if (form[field]) payload.append(field, form[field]);
     });
 
-    Array.from(form.supportingDocuments || []).forEach((file) => {
-      payload.append('supportingDocuments', file);
+    MULTI_FIELDS.forEach((field) => {
+      Array.from(form[field] || []).forEach((file) => {
+        payload.append(field, file);
+      });
     });
 
     try {
       if (editingSubmission) {
         await replaceSubmission(editingSubmission._id, payload);
         setMessage(`Returned submission updated successfully as v${(editingSubmission.packetVersion || 1) + 1}.`);
+        setSubmitState({ loading: false, successOpen: true, successMessage: `Returned submission updated successfully as v${(editingSubmission.packetVersion || 1) + 1}.` });
       } else {
         await createSubmission(payload);
         setMessage('Submission saved successfully as v1.');
+        setSubmitState({ loading: false, successOpen: true, successMessage: 'Proposal submitted successfully.' });
       }
       setEditingSubmission(null);
       setForm(createInitialForm(user?.councilName || ''));
       load();
     } catch (err) {
+      setSubmitState((prev) => ({ ...prev, loading: false }));
       setMessage(err.response?.data?.message || 'Failed to save submission.');
     }
   };
@@ -354,18 +563,18 @@ function SubmissionManagement({ user, councilView = 'history' }) {
     });
   };
 
-  const closeReviewModal = () => setReviewModal({ open: false, mode: 'view', submission: null, remarks: '', reviewChecklist: { supportingDocuments: [] } });
+  const closeReviewModal = () => setReviewModal({ open: false, mode: 'view', submission: null, remarks: '', reviewChecklist: createEmptyReviewChecklist() });
 
   const updateReviewEntry = (key, field, value, index = null) => {
     setReviewModal((prev) => {
       const nextChecklist = { ...prev.reviewChecklist };
-      if (key === 'supportingDocuments') {
-        const nextSupporting = [...(prev.reviewChecklist.supportingDocuments || [])];
-        nextSupporting[index] = {
-          ...(nextSupporting[index] || createReviewEntry()),
+      if (MULTI_FIELDS.includes(key)) {
+        const nextItems = [...(prev.reviewChecklist[key] || [])];
+        nextItems[index] = {
+          ...(nextItems[index] || createReviewEntry()),
           [field]: value,
         };
-        nextChecklist.supportingDocuments = nextSupporting;
+        nextChecklist[key] = nextItems;
       } else {
         nextChecklist[key] = {
           ...(prev.reviewChecklist[key] || createReviewEntry()),
@@ -492,92 +701,146 @@ function SubmissionManagement({ user, councilView = 'history' }) {
                     </div>
                   </div>
 
-                  {!isForInformation ? (
-                    <>
+                  <>
+                    {proposalRule.requireIasCategory ? (
+                      <div className="border rounded-3 p-3">
+                        <h6 className="mb-3">IAS Endorsement Category</h6>
+                        <select className="form-select" value={form.iasEndorsementCategory} onChange={(e) => setField('iasEndorsementCategory', e.target.value)} required>
+                          <option value="">Select endorsement category</option>
+                          {IAS_ENDORSEMENT_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
+                        </select>
+                      </div>
+                    ) : null}
+
+                    {proposalRule.visibleSingle.includes('executiveBriefPdf') || proposalRule.visibleSingle.includes('executiveBriefWord') ? (
                       <div className="border rounded-3 p-3">
                         <h6 className="mb-3">Executive Brief</h6>
-                        <div className="row g-3">
+                        <div className="row g-3 submission-upload-row">
                           <div className="col-md-6">
-                            <FileInput label="Executive Brief PDF" accept="application/pdf" required={!editingSubmission} helper="Upload the signed PDF copy." currentFileName={editingSubmission?.files?.executiveBriefPdf?.filename || ''} preserveOnEmpty={Boolean(editingSubmission)} onChange={(e) => setField('executiveBriefPdf', e.target.files?.[0] || null)} />
+                            <FileInput label="Executive Brief PDF" accept="application/pdf" required={!editingSubmission && proposalRule.requiredSingle.includes('executiveBriefPdf')} helper="Upload the signed PDF copy." currentFileName={editingSubmission?.files?.executiveBriefPdf?.filename || ''} selectedFileNames={getSelectedFileNames('executiveBriefPdf')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(_, file) => setField('executiveBriefPdf', file || null)} />
                           </div>
                           <div className="col-md-6">
-                            <FileInput label="Executive Brief Word" accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required={!editingSubmission} helper="Upload the editable Word copy." currentFileName={editingSubmission?.files?.executiveBriefWord?.filename || ''} preserveOnEmpty={Boolean(editingSubmission)} onChange={(e) => setField('executiveBriefWord', e.target.files?.[0] || null)} />
+                            <FileInput label="Executive Brief Word" accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required={!editingSubmission && proposalRule.requiredSingle.includes('executiveBriefWord')} helper="Upload the editable Word copy." currentFileName={editingSubmission?.files?.executiveBriefWord?.filename || ''} selectedFileNames={getSelectedFileNames('executiveBriefWord')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(_, file) => setField('executiveBriefWord', file || null)} />
                           </div>
                         </div>
                       </div>
+                    ) : null}
 
+                    {proposalRule.visibleSingle.includes('proposalPdf') || proposalRule.visibleSingle.includes('proposalWord') ? (
                       <div className="border rounded-3 p-3">
                         <h6 className="mb-3">Proposal</h6>
-                        <div className="row g-3">
+                        <div className="row g-3 submission-upload-row">
                           <div className="col-md-6">
-                            <FileInput label="Proposal PDF" accept="application/pdf" required={!editingSubmission} helper="Upload the final PDF proposal." currentFileName={editingSubmission?.files?.proposalPdf?.filename || ''} preserveOnEmpty={Boolean(editingSubmission)} onChange={(e) => setField('proposalPdf', e.target.files?.[0] || null)} />
+                            <FileInput label="Proposal PDF" accept="application/pdf" required={!editingSubmission && proposalRule.requiredSingle.includes('proposalPdf')} helper="Upload the final PDF proposal." currentFileName={editingSubmission?.files?.proposalPdf?.filename || ''} selectedFileNames={getSelectedFileNames('proposalPdf')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(_, file) => setField('proposalPdf', file || null)} />
                           </div>
                           <div className="col-md-6">
-                            <FileInput label="Proposal Word" accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required={!editingSubmission} helper="Upload the editable Word proposal." currentFileName={editingSubmission?.files?.proposalWord?.filename || ''} preserveOnEmpty={Boolean(editingSubmission)} onChange={(e) => setField('proposalWord', e.target.files?.[0] || null)} />
+                            <FileInput label="Proposal Word" accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required={!editingSubmission && proposalRule.requiredSingle.includes('proposalWord')} helper="Upload the editable Word proposal." currentFileName={editingSubmission?.files?.proposalWord?.filename || ''} selectedFileNames={getSelectedFileNames('proposalWord')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(_, file) => setField('proposalWord', file || null)} />
                           </div>
                         </div>
                       </div>
-                    </>
-                  ) : (
-                    <div className="border rounded-3 p-3">
-                      <h6 className="mb-2">For Information Document <span className="text-danger">*</span></h6>
-                      <div className="small text-muted mb-3">Upload at least one PDF: Presentation or Proposal.</div>
-                      <div className="row g-3">
-                        <div className="col-md-6">
-                          <FileInput
-                            label="Presentation PDF"
-                            accept="application/pdf"
-                            helper="Upload the presentation PDF if available."
-                            currentFileName={editingSubmission?.files?.presentationPdf?.filename || ''}
-                            preserveOnEmpty={Boolean(editingSubmission)}
-                            onChange={(e) => setField('presentationPdf', e.target.files?.[0] || null)}
-                          />
-                        </div>
-                        <div className="col-md-6">
-                          <FileInput
-                            label="Proposal PDF"
-                            accept="application/pdf"
-                            helper="Upload the proposal PDF if available. At least one of the two PDFs is required."
-                            currentFileName={editingSubmission?.files?.forInformationProposalPdf?.filename || ''}
-                            preserveOnEmpty={Boolean(editingSubmission)}
-                            onChange={(e) => setField('forInformationProposalPdf', e.target.files?.[0] || null)}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                    ) : null}
 
-                  {!isForInformation ? (
-                    <>
+                    {proposalRule.visibleSingle.includes('summaryMatrixPdf') || proposalRule.visibleSingle.includes('copyOfMoaMouPdf') ? (
+                      <div className="border rounded-3 p-3">
+                        <h6 className="mb-3">MOA/MOU Attachments</h6>
+                        <div className="row g-3 submission-upload-row">
+                          {proposalRule.visibleSingle.includes('summaryMatrixPdf') ? (
+                            <div className="col-md-6">
+                              <FileInput label="Summary Matrix" accept="application/pdf" required={!editingSubmission && proposalRule.requiredSingle.includes('summaryMatrixPdf')} currentFileName={editingSubmission?.files?.summaryMatrixPdf?.filename || ''} selectedFileNames={getSelectedFileNames('summaryMatrixPdf')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(_, file) => setField('summaryMatrixPdf', file || null)} />
+                            </div>
+                          ) : null}
+                          {proposalRule.visibleSingle.includes('copyOfMoaMouPdf') ? (
+                            <div className="col-md-6">
+                              <FileInput label="Copy of MOA/MOU" accept="application/pdf" required={!editingSubmission && proposalRule.requiredSingle.includes('copyOfMoaMouPdf')} currentFileName={editingSubmission?.files?.copyOfMoaMouPdf?.filename || ''} selectedFileNames={getSelectedFileNames('copyOfMoaMouPdf')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(_, file) => setField('copyOfMoaMouPdf', file || null)} />
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {proposalRule.visibleSingle.includes('copyOfUsufructPdf') || proposalRule.visibleSingle.includes('copyOfDeedOfDonationPdf') ? (
+                      <div className="border rounded-3 p-3">
+                        <h6 className="mb-3">Special Attachments</h6>
+                        <div className="row g-3 submission-upload-row">
+                          {proposalRule.visibleSingle.includes('copyOfUsufructPdf') ? (
+                            <div className="col-md-6">
+                              <FileInput label="Copy of Usufruct" accept="application/pdf" required={!editingSubmission && proposalRule.requiredSingle.includes('copyOfUsufructPdf')} currentFileName={editingSubmission?.files?.copyOfUsufructPdf?.filename || ''} selectedFileNames={getSelectedFileNames('copyOfUsufructPdf')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(_, file) => setField('copyOfUsufructPdf', file || null)} />
+                            </div>
+                          ) : null}
+                          {proposalRule.visibleSingle.includes('copyOfDeedOfDonationPdf') ? (
+                            <div className="col-md-6">
+                              <FileInput label="Copy of Deed of Donation" accept="application/pdf" required={!editingSubmission && proposalRule.requiredSingle.includes('copyOfDeedOfDonationPdf')} currentFileName={editingSubmission?.files?.copyOfDeedOfDonationPdf?.filename || ''} selectedFileNames={getSelectedFileNames('copyOfDeedOfDonationPdf')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(_, file) => setField('copyOfDeedOfDonationPdf', file || null)} />
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {proposalRule.visibleMulti.includes('supportingDocuments') ? (
                       <div className="border rounded-3 p-3">
                         <h6 className="mb-3">Supporting Documents</h6>
-                        <FileInput label="Supporting Documents" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" multiple helper="Upload related attachments. You can select multiple files." preserveOnEmpty={Boolean(editingSubmission)} onChange={(e) => setField('supportingDocuments', Array.from(e.target.files || []))} />
-                      </div>
-
-                      <div className="border rounded-3 p-3">
-                        <h6 className="mb-3">Endorsements</h6>
-                        <div className="row g-3">
+                        <div className="row g-3 submission-upload-row">
                           <div className="col-md-6">
-                            <FileInput label="Legal Endorsement" accept="application/pdf" required={!editingSubmission} currentFileName={editingSubmission?.files?.legalEndorsementPdf?.filename || ''} preserveOnEmpty={Boolean(editingSubmission)} onChange={(e) => setField('legalEndorsementPdf', e.target.files?.[0] || null)} />
-                          </div>
-                          <div className="col-md-6">
-                            <FileInput label="VPAF / FMS Certification" accept="application/pdf" required={!editingSubmission} currentFileName={editingSubmission?.files?.vpafFanCertificationPdf?.filename || ''} preserveOnEmpty={Boolean(editingSubmission)} onChange={(e) => setField('vpafFanCertificationPdf', e.target.files?.[0] || null)} />
-                          </div>
-                          <div className="col-md-4">
-                            <FileInput label="VPAA / Administrative Council" accept="application/pdf" currentFileName={editingSubmission?.files?.vpaaAcademicCouncilPdf?.filename || ''} preserveOnEmpty={Boolean(editingSubmission)} onChange={(e) => setField('vpaaAcademicCouncilPdf', e.target.files?.[0] || null)} />
-                          </div>
-                          <div className="col-md-4">
-                            <FileInput label="VPRGES / Production Council" accept="application/pdf" currentFileName={editingSubmission?.files?.vprgesProductionCouncilPdf?.filename || ''} preserveOnEmpty={Boolean(editingSubmission)} onChange={(e) => setField('vprgesProductionCouncilPdf', e.target.files?.[0] || null)} />
-                          </div>
-                          <div className="col-md-4">
-                            <FileInput label="VPRDE / URDEC" accept="application/pdf" currentFileName={editingSubmission?.files?.vprdeUrdecPdf?.filename || ''} preserveOnEmpty={Boolean(editingSubmission)} onChange={(e) => setField('vprdeUrdecPdf', e.target.files?.[0] || null)} />
+                            <FileInput label="Supporting Documents" accept="application/pdf" required={!editingSubmission && proposalRule.requiredMulti.includes('supportingDocuments')} multiple helper="Upload related PDF attachments. You can select multiple files." currentFileNames={getArrayFiles(editingSubmission?.files || {}, 'supportingDocuments').map((file) => file.filename)} selectedFileNames={getSelectedFileNames('supportingDocuments')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(files) => setField('supportingDocuments', files)} />
                           </div>
                         </div>
                       </div>
-                    </>
-                  ) : null}
+                    ) : null}
 
-                  <button className="btn btn-primary" type="submit">{editingSubmission ? `Submit Revision v${(editingSubmission.packetVersion || 1) + 1}` : 'Submit Proposal Packet'}</button>
+                    {proposalRule.visibleSingle.includes('legalEndorsementPdf') || proposalRule.visibleMulti.some((field) => field !== 'supportingDocuments') ? (
+                      <div className="border rounded-3 p-3">
+                        <h6 className="mb-3">Endorsements</h6>
+                        <div className="row g-3 submission-upload-row">
+                          {proposalRule.visibleSingle.includes('legalEndorsementPdf') ? (
+                            <div className="col-md-6">
+                              <FileInput label="Legal Endorsement" accept="application/pdf" required={!editingSubmission && proposalRule.requiredSingle.includes('legalEndorsementPdf')} currentFileName={editingSubmission?.files?.legalEndorsementPdf?.filename || ''} selectedFileNames={getSelectedFileNames('legalEndorsementPdf')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(_, file) => setField('legalEndorsementPdf', file || null)} />
+                            </div>
+                          ) : null}
+                          {proposalRule.visibleMulti.includes('vpafFanCertificationPdfs') ? (
+                            <div className="col-md-6">
+                              <FileInput label="VPAF / FMS Certification" accept="application/pdf" required={!editingSubmission && proposalRule.requiredMulti.includes('vpafFanCertificationPdfs')} multiple currentFileNames={getArrayFiles(editingSubmission?.files || {}, 'vpafFanCertificationPdfs').map((file) => file.filename)} selectedFileNames={getSelectedFileNames('vpafFanCertificationPdfs')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(files) => setField('vpafFanCertificationPdfs', files)} />
+                            </div>
+                          ) : null}
+                          {proposalRule.visibleMulti.includes('vpaaAdministrativeCouncilPdfs') ? (
+                            <div className="col-md-6">
+                              <FileInput label="VPAA / Administrative Council" accept="application/pdf" required={!editingSubmission && proposalRule.requiredMulti.includes('vpaaAdministrativeCouncilPdfs')} multiple currentFileNames={getArrayFiles(editingSubmission?.files || {}, 'vpaaAdministrativeCouncilPdfs').map((file) => file.filename)} selectedFileNames={getSelectedFileNames('vpaaAdministrativeCouncilPdfs')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(files) => setField('vpaaAdministrativeCouncilPdfs', files)} />
+                            </div>
+                          ) : null}
+                          {proposalRule.visibleMulti.includes('vprgesProductionCouncilPdfs') ? (
+                            <div className="col-md-6">
+                              <FileInput label="VPRGES / Production Council" accept="application/pdf" required={!editingSubmission && proposalRule.requiredMulti.includes('vprgesProductionCouncilPdfs')} multiple currentFileNames={getArrayFiles(editingSubmission?.files || {}, 'vprgesProductionCouncilPdfs').map((file) => file.filename)} selectedFileNames={getSelectedFileNames('vprgesProductionCouncilPdfs')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(files) => setField('vprgesProductionCouncilPdfs', files)} />
+                            </div>
+                          ) : null}
+                          {proposalRule.visibleMulti.includes('vprdeUrdecPdfs') ? (
+                            <div className="col-md-6">
+                              <FileInput label="VPRDE / URDEC" accept="application/pdf" required={!editingSubmission && proposalRule.requiredMulti.includes('vprdeUrdecPdfs')} multiple currentFileNames={getArrayFiles(editingSubmission?.files || {}, 'vprdeUrdecPdfs').map((file) => file.filename)} selectedFileNames={getSelectedFileNames('vprdeUrdecPdfs')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(files) => setField('vprdeUrdecPdfs', files)} />
+                            </div>
+                          ) : null}
+                          {proposalRule.visibleMulti.includes('officeOfPresidentPdfs') ? (
+                            <div className="col-md-6">
+                              <FileInput label="Office of the President" accept="application/pdf" required={!editingSubmission && proposalRule.requiredMulti.includes('officeOfPresidentPdfs')} multiple currentFileNames={getArrayFiles(editingSubmission?.files || {}, 'officeOfPresidentPdfs').map((file) => file.filename)} selectedFileNames={getSelectedFileNames('officeOfPresidentPdfs')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(files) => setField('officeOfPresidentPdfs', files)} />
+                            </div>
+                          ) : null}
+                          {proposalRule.visibleMulti.includes('iasEndorsementPdfs') ? (
+                            <div className="col-md-6">
+                              <FileInput label="IAS Endorsement" accept="application/pdf" required={!editingSubmission && proposalRule.requiredMulti.includes('iasEndorsementPdfs')} multiple helper="Upload the IAS endorsement PDF files for the selected category." currentFileNames={getArrayFiles(editingSubmission?.files || {}, 'iasEndorsementPdfs').map((file) => file.filename)} selectedFileNames={getSelectedFileNames('iasEndorsementPdfs')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(files) => setField('iasEndorsementPdfs', files)} />
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+                    ) : null}
+
+                  </>
+
+                  <div className="submission-form-actions">
+                    <button className="btn agenda-btn-update" type="submit" disabled={submitState.loading}>
+                      {submitState.loading ? <span className="spinner-border spinner-border-sm me-1" /> : null}
+                      {editingSubmission ? `Submit Revision v${(editingSubmission.packetVersion || 1) + 1}` : 'Submit Proposal'}
+                    </button>
+                    <button className="btn agenda-btn-reset" type="button" onClick={resetCouncilForm} disabled={submitState.loading}>
+                      Reset
+                    </button>
+                  </div>
                   </form>
                 </div>
               </div>
@@ -736,9 +999,7 @@ function SubmissionManagement({ user, councilView = 'history' }) {
                     </thead>
                     <tbody>
                       {getSubmissionDocuments(reviewModal.submission).map((doc) => {
-                        const reviewItem = doc.key === 'supportingDocuments'
-                          ? reviewModal.reviewChecklist.supportingDocuments?.[doc.index] || createReviewEntry()
-                          : reviewModal.reviewChecklist[doc.key] || createReviewEntry();
+                        const reviewItem = getReviewEntryValue(reviewModal.reviewChecklist, doc.key, doc.index);
                         const readOnly = reviewModal.mode !== 'edit';
 
                         return (
@@ -801,6 +1062,37 @@ function SubmissionManagement({ user, councilView = 'history' }) {
                 {reviewModal.mode === 'edit' && ['board', 'superadmin'].includes(user.role) && reviewModal.submission?.status !== 'Archived' ? (
                   <button type="button" className="btn btn-warning" onClick={() => handleReviewAction('return')}>Return</button>
                 ) : null}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {submitState.loading ? (
+        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0, 0, 0, 0.45)', zIndex: 1070 }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-body text-center py-4">
+                <div className="spinner-border text-primary mb-3" role="status" />
+                <h5 className="mb-2">Submitting Proposal</h5>
+                <div className="text-muted">Please wait while the files are uploaded and the proposal is saved.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {submitState.successOpen ? (
+        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0, 0, 0, 0.45)', zIndex: 1070 }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header bg-success text-white">
+                <h5 className="modal-title">Submission Successful</h5>
+                <button type="button" className="btn-close btn-close-white" onClick={() => setSubmitState((prev) => ({ ...prev, successOpen: false }))} />
+              </div>
+              <div className="modal-body">
+                <p className="mb-0">{submitState.successMessage}</p>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-success" onClick={() => setSubmitState((prev) => ({ ...prev, successOpen: false }))}>OK</button>
               </div>
             </div>
           </div>

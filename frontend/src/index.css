@@ -1040,6 +1040,68 @@ body {
 .agenda-dropzone-hint { color: #8895b8; font-size: 0.8rem; font-weight: 500; }
 .agenda-dropzone-file { color: var(--green); font-size: 0.82rem; font-weight: 700; word-break: break-all; }
 
+.submission-upload-row > [class*='col-'] {
+  display: flex;
+}
+
+.submission-file-input {
+  width: 100%;
+}
+
+.submission-file-input .agenda-dropzone {
+  min-height: 72px;
+  padding: 18px 22px !important;
+}
+
+.submission-file-input .agenda-dropzone-hint,
+.submission-file-input .agenda-dropzone-file {
+  width: 100%;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.submission-file-input .agenda-dropzone-hint {
+  font-size: 0.92rem;
+}
+
+.submission-file-input .agenda-dropzone-file {
+  font-size: 0.9rem;
+}
+
+.submission-form-actions {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: nowrap;
+}
+
+.submission-form-actions .agenda-btn-update,
+.submission-form-actions .agenda-btn-reset {
+  width: auto;
+  min-width: 210px;
+  padding: 14px 32px;
+}
+
+@media (max-width: 576px) {
+  .submission-form-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .submission-form-actions .agenda-btn-update,
+  .submission-form-actions .agenda-btn-reset {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .submission-form-actions .agenda-btn-reset {
+    margin-left: 0;
+  }
+}
+
 /* Action buttons */
 .agenda-btn-update {
   background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);

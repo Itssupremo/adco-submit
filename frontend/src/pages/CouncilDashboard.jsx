@@ -1,6 +1,35 @@
 import { useEffect, useState } from 'react';
 import { getMyCurrentSubmission, getNotifications, getSubmissionFileUrl, getSubmissions } from '../services/api';
 
+const LEGACY_ARRAY_COMPATIBILITY = {
+  vpafFanCertificationPdfs: 'vpafFanCertificationPdf',
+  vpaaAdministrativeCouncilPdfs: 'vpaaAcademicCouncilPdf',
+  vprgesProductionCouncilPdfs: 'vprgesProductionCouncilPdf',
+  vprdeUrdecPdfs: 'vprdeUrdecPdf',
+};
+
+const SINGLE_FIELDS = [
+  ['executiveBriefPdf', 'Executive Brief PDF'],
+  ['executiveBriefWord', 'Executive Brief Word'],
+  ['proposalPdf', 'Proposal PDF'],
+  ['proposalWord', 'Proposal Word'],
+  ['summaryMatrixPdf', 'Summary Matrix'],
+  ['copyOfMoaMouPdf', 'Copy of MOA/MOU'],
+  ['copyOfUsufructPdf', 'Copy of Usufruct'],
+  ['copyOfDeedOfDonationPdf', 'Copy of Deed of Donation'],
+  ['legalEndorsementPdf', 'Legal Endorsement'],
+];
+
+const MULTI_FIELDS = [
+  ['supportingDocuments', 'Supporting Document'],
+  ['vpafFanCertificationPdfs', 'VPAF / FMS Certification'],
+  ['vpaaAdministrativeCouncilPdfs', 'VPAA / Administrative Council'],
+  ['vprgesProductionCouncilPdfs', 'VPRGES / Production Council'],
+  ['vprdeUrdecPdfs', 'VPRDE / URDEC'],
+  ['officeOfPresidentPdfs', 'Office of the President'],
+  ['iasEndorsementPdfs', 'IAS Endorsement'],
+];
+
 const fileExists = (file) => Boolean(file && (file.filename || file.s3Key));
 const isPdfFile = (file) => {
   if (!file) return false;
@@ -22,19 +51,20 @@ const getSubmissionDocuments = (submission) => {
   const files = submission?.files || {};
   const items = [];
 
-  if (fileExists(files.executiveBriefPdf)) items.push({ label: 'Executive Brief PDF', key: 'executiveBriefPdf', file: files.executiveBriefPdf });
-  if (fileExists(files.executiveBriefWord)) items.push({ label: 'Executive Brief Word', key: 'executiveBriefWord', file: files.executiveBriefWord });
-  if (fileExists(files.proposalPdf)) items.push({ label: 'Proposal PDF', key: 'proposalPdf', file: files.proposalPdf });
-  if (fileExists(files.proposalWord)) items.push({ label: 'Proposal Word', key: 'proposalWord', file: files.proposalWord });
-  if (fileExists(files.presentationPdf)) items.push({ label: 'Presentation PDF', key: 'presentationPdf', file: files.presentationPdf });
-  if (fileExists(files.forInformationProposalPdf)) items.push({ label: 'For Information Proposal PDF', key: 'forInformationProposalPdf', file: files.forInformationProposalPdf });
-  if (fileExists(files.legalEndorsementPdf)) items.push({ label: 'Legal Endorsement', key: 'legalEndorsementPdf', file: files.legalEndorsementPdf });
-  if (fileExists(files.vpafFanCertificationPdf)) items.push({ label: 'VPAF / FMS Certification', key: 'vpafFanCertificationPdf', file: files.vpafFanCertificationPdf });
-  if (fileExists(files.vpaaAcademicCouncilPdf)) items.push({ label: 'VPAA / Administrative Council', key: 'vpaaAcademicCouncilPdf', file: files.vpaaAcademicCouncilPdf });
-  if (fileExists(files.vprgesProductionCouncilPdf)) items.push({ label: 'VPRGES / Production Council', key: 'vprgesProductionCouncilPdf', file: files.vprgesProductionCouncilPdf });
-  if (fileExists(files.vprdeUrdecPdf)) items.push({ label: 'VPRDE / URDEC', key: 'vprdeUrdecPdf', file: files.vprdeUrdecPdf });
-  (files.supportingDocuments || []).forEach((file, index) => {
-    if (fileExists(file)) items.push({ label: `Supporting Document ${index + 1}`, key: 'supportingDocuments', index, file });
+  SINGLE_FIELDS.forEach(([key, label]) => {
+    if (fileExists(files[key])) items.push({ label, key, file: files[key] });
+  });
+
+  MULTI_FIELDS.forEach(([key, label]) => {
+    const direct = Array.isArray(files[key]) && files[key].length > 0
+      ? files[key].filter(fileExists)
+      : [];
+    const compatible = direct.length > 0
+      ? direct
+      : (LEGACY_ARRAY_COMPATIBILITY[key] && fileExists(files[LEGACY_ARRAY_COMPATIBILITY[key]]) ? [files[LEGACY_ARRAY_COMPATIBILITY[key]]] : []);
+    compatible.forEach((file, index) => {
+      items.push({ label: `${label} ${index + 1}`, key, index, file });
+    });
   });
 
   return items;
@@ -43,8 +73,8 @@ const getSubmissionDocuments = (submission) => {
 const getSubmissionReviewItems = (submission) => {
   const checklist = submission?.reviewChecklist || {};
   return getSubmissionDocuments(submission).map((doc) => {
-    const review = doc.key === 'supportingDocuments'
-      ? checklist.supportingDocuments?.[doc.index] || {}
+    const review = doc.index !== undefined
+      ? checklist[doc.key]?.[doc.index] || {}
       : checklist[doc.key] || {};
 
     return {

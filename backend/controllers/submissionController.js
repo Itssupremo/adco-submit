@@ -17,50 +17,166 @@ const ALLOWED_MIMES = [PDF_MIME, ...WORD_MIMES];
 const DOCX_MAGIC = [0x50, 0x4b, 0x03, 0x04];
 const DOC_MAGIC = [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1];
 const MAX_LOCAL_PACKET_BYTES = 12 * 1024 * 1024;
-const PROPOSAL_TYPES = ['Academic', 'Research & Extension', 'Administrative', 'Finance', 'Projects', 'MOH/ MOU/ Deed of Donation/ Usufruct', 'For Information'];
+const PROPOSAL_TYPES = [
+  'Academic',
+  'Research & Extension',
+  'Administrative',
+  'Finance',
+  'Projects',
+  'Production',
+  'Usufruct',
+  'Deed of Donation',
+  'MOA/MOU (Academic)',
+  'MOA/MOU (Research, Development, and Extension)',
+  'MOA/MOU (Finance)',
+  'MOA/MOU (Administrative)',
+  'For Information',
+];
 
 const SINGLE_FILE_FIELDS = [
   'executiveBriefPdf',
   'executiveBriefWord',
   'proposalPdf',
   'proposalWord',
+  'summaryMatrixPdf',
+  'copyOfMoaMouPdf',
   'presentationPdf',
   'forInformationProposalPdf',
+  'copyOfUsufructPdf',
+  'copyOfDeedOfDonationPdf',
   'legalEndorsementPdf',
+];
+
+const MULTI_FILE_FIELDS = [
+  'supportingDocuments',
+  'vpafFanCertificationPdfs',
+  'vpaaAdministrativeCouncilPdfs',
+  'vprgesProductionCouncilPdfs',
+  'vprdeUrdecPdfs',
+  'officeOfPresidentPdfs',
+  'iasEndorsementPdfs',
+];
+
+const LEGACY_SINGLE_FIELDS = [
   'vpafFanCertificationPdf',
   'vpaaAcademicCouncilPdf',
   'vprgesProductionCouncilPdf',
   'vprdeUrdecPdf',
 ];
+
+const LEGACY_ARRAY_COMPATIBILITY = {
+  vpafFanCertificationPdfs: 'vpafFanCertificationPdf',
+  vpaaAdministrativeCouncilPdfs: 'vpaaAcademicCouncilPdf',
+  vprgesProductionCouncilPdfs: 'vprgesProductionCouncilPdf',
+  vprdeUrdecPdfs: 'vprdeUrdecPdf',
+};
+
+const PROPOSAL_RULES = {
+  Academic: {
+    visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
+    visibleMulti: ['supportingDocuments', 'vpaaAdministrativeCouncilPdfs'],
+    requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
+    requiredMulti: ['supportingDocuments', 'vpaaAdministrativeCouncilPdfs'],
+  },
+  'Research & Extension': {
+    visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
+    visibleMulti: ['supportingDocuments', 'vprdeUrdecPdfs'],
+    requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
+    requiredMulti: ['supportingDocuments', 'vprdeUrdecPdfs'],
+  },
+  Administrative: {
+    visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
+    visibleMulti: ['supportingDocuments', 'vpafFanCertificationPdfs'],
+    requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
+    requiredMulti: ['supportingDocuments', 'vpafFanCertificationPdfs'],
+  },
+  Finance: {
+    visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
+    visibleMulti: ['supportingDocuments', 'vpafFanCertificationPdfs'],
+    requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
+    requiredMulti: ['supportingDocuments', 'vpafFanCertificationPdfs'],
+  },
+  Projects: {
+    visibleSingle: ['executiveBriefPdf', 'executiveBriefWord'],
+    visibleMulti: ['supportingDocuments', 'vpafFanCertificationPdfs', 'iasEndorsementPdfs'],
+    requiredSingle: ['executiveBriefPdf', 'executiveBriefWord'],
+    requiredMulti: ['supportingDocuments', 'vpafFanCertificationPdfs', 'iasEndorsementPdfs'],
+    requireIasCategory: true,
+  },
+  Production: {
+    visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
+    visibleMulti: ['supportingDocuments', 'vprgesProductionCouncilPdfs'],
+    requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
+    requiredMulti: ['supportingDocuments', 'vprgesProductionCouncilPdfs'],
+  },
+  Usufruct: {
+    visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'copyOfUsufructPdf', 'legalEndorsementPdf'],
+    visibleMulti: [],
+    requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'copyOfUsufructPdf', 'legalEndorsementPdf'],
+    requiredMulti: [],
+  },
+  'Deed of Donation': {
+    visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'copyOfDeedOfDonationPdf', 'legalEndorsementPdf'],
+    visibleMulti: ['vpafFanCertificationPdfs'],
+    requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'copyOfDeedOfDonationPdf', 'legalEndorsementPdf'],
+    requiredMulti: ['vpafFanCertificationPdfs'],
+  },
+  'MOA/MOU (Academic)': {
+    visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'summaryMatrixPdf', 'copyOfMoaMouPdf', 'legalEndorsementPdf'],
+    visibleMulti: ['vpafFanCertificationPdfs', 'vpaaAdministrativeCouncilPdfs'],
+    requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'summaryMatrixPdf', 'copyOfMoaMouPdf', 'legalEndorsementPdf'],
+    requiredMulti: ['vpafFanCertificationPdfs', 'vpaaAdministrativeCouncilPdfs'],
+  },
+  'MOA/MOU (Research, Development, and Extension)': {
+    visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'summaryMatrixPdf', 'copyOfMoaMouPdf', 'legalEndorsementPdf'],
+    visibleMulti: ['vpafFanCertificationPdfs', 'vprdeUrdecPdfs'],
+    requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'summaryMatrixPdf', 'copyOfMoaMouPdf', 'legalEndorsementPdf'],
+    requiredMulti: ['vpafFanCertificationPdfs', 'vprdeUrdecPdfs'],
+  },
+  'MOA/MOU (Finance)': {
+    visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'summaryMatrixPdf', 'copyOfMoaMouPdf', 'legalEndorsementPdf'],
+    visibleMulti: ['vpafFanCertificationPdfs'],
+    requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'summaryMatrixPdf', 'copyOfMoaMouPdf', 'legalEndorsementPdf'],
+    requiredMulti: ['vpafFanCertificationPdfs'],
+  },
+  'MOA/MOU (Administrative)': {
+    visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'summaryMatrixPdf', 'copyOfMoaMouPdf', 'legalEndorsementPdf'],
+    visibleMulti: ['vpafFanCertificationPdfs'],
+    requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'summaryMatrixPdf', 'copyOfMoaMouPdf', 'legalEndorsementPdf'],
+    requiredMulti: ['vpafFanCertificationPdfs'],
+  },
+  'For Information': {
+    visibleSingle: ['presentationPdf', 'forInformationProposalPdf'],
+    visibleMulti: [],
+    requiredSingle: [],
+    requiredMulti: [],
+    requiresAnyOf: ['presentationPdf', 'forInformationProposalPdf'],
+  },
+};
 
 const FIELD_CONFIG = [
   { name: 'executiveBriefPdf', maxCount: 1 },
   { name: 'executiveBriefWord', maxCount: 1 },
   { name: 'proposalPdf', maxCount: 1 },
   { name: 'proposalWord', maxCount: 1 },
+  { name: 'summaryMatrixPdf', maxCount: 1 },
+  { name: 'copyOfMoaMouPdf', maxCount: 1 },
   { name: 'presentationPdf', maxCount: 1 },
   { name: 'forInformationProposalPdf', maxCount: 1 },
-  { name: 'supportingDocuments', maxCount: 10 },
+  { name: 'copyOfUsufructPdf', maxCount: 1 },
+  { name: 'copyOfDeedOfDonationPdf', maxCount: 1 },
   { name: 'legalEndorsementPdf', maxCount: 1 },
-  { name: 'vpafFanCertificationPdf', maxCount: 1 },
-  { name: 'vpaaAcademicCouncilPdf', maxCount: 1 },
-  { name: 'vprgesProductionCouncilPdf', maxCount: 1 },
-  { name: 'vprdeUrdecPdf', maxCount: 1 },
+  { name: 'supportingDocuments', maxCount: 10 },
+  { name: 'vpafFanCertificationPdfs', maxCount: 10 },
+  { name: 'vpaaAdministrativeCouncilPdfs', maxCount: 10 },
+  { name: 'vprgesProductionCouncilPdfs', maxCount: 10 },
+  { name: 'vprdeUrdecPdfs', maxCount: 10 },
+  { name: 'officeOfPresidentPdfs', maxCount: 10 },
+  { name: 'iasEndorsementPdfs', maxCount: 10 },
 ];
 
-const REVIEWABLE_SINGLE_FIELDS = [
-  'executiveBriefPdf',
-  'executiveBriefWord',
-  'proposalPdf',
-  'proposalWord',
-  'presentationPdf',
-  'forInformationProposalPdf',
-  'legalEndorsementPdf',
-  'vpafFanCertificationPdf',
-  'vpaaAcademicCouncilPdf',
-  'vprgesProductionCouncilPdf',
-  'vprdeUrdecPdf',
-];
+const REVIEWABLE_SINGLE_FIELDS = [...SINGLE_FILE_FIELDS, ...LEGACY_SINGLE_FIELDS];
+const REVIEWABLE_ARRAY_FIELDS = MULTI_FILE_FIELDS;
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -80,6 +196,8 @@ const actorFromUser = (user) => ({
 });
 
 const fileExists = (file) => Boolean(file && (file.filename || file.s3Key || file.data));
+const arrayHasFiles = (files = []) => Array.isArray(files) && files.some(fileExists);
+const getProposalRule = (proposalType = '') => PROPOSAL_RULES[proposalType] || PROPOSAL_RULES.Academic;
 
 const inferContentType = (filename = '') => {
   const lower = String(filename).toLowerCase();
@@ -100,15 +218,34 @@ const cloneFile = (file) => {
   };
 };
 
+const cloneFileArray = (files = []) => Array.isArray(files) ? files.filter(fileExists).map(cloneFile) : [];
+
+const cloneCompatArray = (files = {}, arrayField) => {
+  const direct = cloneFileArray(files[arrayField]);
+  if (direct.length > 0) return direct;
+  const legacyField = LEGACY_ARRAY_COMPATIBILITY[arrayField];
+  return legacyField && fileExists(files[legacyField]) ? [cloneFile(files[legacyField])] : [];
+};
+
 const clonePacketFiles = (files = {}) => ({
   executiveBriefPdf: cloneFile(files.executiveBriefPdf),
   executiveBriefWord: cloneFile(files.executiveBriefWord),
   proposalPdf: cloneFile(files.proposalPdf),
   proposalWord: cloneFile(files.proposalWord),
+  summaryMatrixPdf: cloneFile(files.summaryMatrixPdf),
+  copyOfMoaMouPdf: cloneFile(files.copyOfMoaMouPdf),
   presentationPdf: cloneFile(files.presentationPdf),
   forInformationProposalPdf: cloneFile(files.forInformationProposalPdf),
-  supportingDocuments: Array.isArray(files.supportingDocuments) ? files.supportingDocuments.filter(fileExists).map(cloneFile) : [],
+  supportingDocuments: cloneFileArray(files.supportingDocuments),
+  copyOfUsufructPdf: cloneFile(files.copyOfUsufructPdf),
+  copyOfDeedOfDonationPdf: cloneFile(files.copyOfDeedOfDonationPdf),
   legalEndorsementPdf: cloneFile(files.legalEndorsementPdf),
+  vpafFanCertificationPdfs: cloneCompatArray(files, 'vpafFanCertificationPdfs'),
+  vpaaAdministrativeCouncilPdfs: cloneCompatArray(files, 'vpaaAdministrativeCouncilPdfs'),
+  vprgesProductionCouncilPdfs: cloneCompatArray(files, 'vprgesProductionCouncilPdfs'),
+  vprdeUrdecPdfs: cloneCompatArray(files, 'vprdeUrdecPdfs'),
+  officeOfPresidentPdfs: cloneFileArray(files.officeOfPresidentPdfs),
+  iasEndorsementPdfs: cloneFileArray(files.iasEndorsementPdfs),
   vpafFanCertificationPdf: cloneFile(files.vpafFanCertificationPdf),
   vpaaAcademicCouncilPdf: cloneFile(files.vpaaAcademicCouncilPdf),
   vprgesProductionCouncilPdf: cloneFile(files.vprgesProductionCouncilPdf),
@@ -124,9 +261,9 @@ const estimatePacketBytes = (files = {}) => {
     total += size;
   });
 
-  if (Array.isArray(packetFiles.supportingDocuments)) {
-    total += packetFiles.supportingDocuments.reduce((sum, file) => sum + (file?.data?.length || 0), 0);
-  }
+  MULTI_FILE_FIELDS.forEach((field) => {
+    total += (packetFiles[field] || []).reduce((sum, file) => sum + (file?.data?.length || 0), 0);
+  });
 
   return total;
 };
@@ -148,40 +285,42 @@ const collectS3KeysFromPacket = (files = {}) => {
     if (packetFiles[field]?.s3Key) keys.push(packetFiles[field].s3Key);
   });
 
-  if (Array.isArray(packetFiles.supportingDocuments)) {
-    packetFiles.supportingDocuments.forEach((file) => {
+  MULTI_FILE_FIELDS.forEach((field) => {
+    (packetFiles[field] || []).forEach((file) => {
       if (file?.s3Key) keys.push(file.s3Key);
     });
-  }
+  });
 
   return keys;
 };
 
 const stripPacketFiles = (files = {}) => {
   const clone = clonePacketFiles(files);
-  SINGLE_FILE_FIELDS.forEach((field) => {
+  [...SINGLE_FILE_FIELDS, ...LEGACY_SINGLE_FIELDS].forEach((field) => {
     if (clone[field]) delete clone[field].data;
   });
-  if (Array.isArray(clone.supportingDocuments)) {
-    clone.supportingDocuments = clone.supportingDocuments.map((item) => {
+  MULTI_FILE_FIELDS.forEach((field) => {
+    clone[field] = (clone[field] || []).map((item) => {
       const next = { ...item };
       delete next.data;
       return next;
     });
-  }
+  });
   return clone;
 };
 
 const createEmptyReviewItem = () => ({ checked: false, remarks: '' });
 
 const buildReviewChecklist = (files = {}) => {
-  const checklist = { supportingDocuments: [] };
+  const checklist = {};
   REVIEWABLE_SINGLE_FIELDS.forEach((field) => {
     checklist[field] = createEmptyReviewItem();
   });
-  checklist.supportingDocuments = Array.isArray(files.supportingDocuments)
-    ? files.supportingDocuments.filter(fileExists).map(() => createEmptyReviewItem())
-    : [];
+  REVIEWABLE_ARRAY_FIELDS.forEach((field) => {
+    checklist[field] = Array.isArray(files[field])
+      ? files[field].filter(fileExists).map(() => createEmptyReviewItem())
+      : [];
+  });
   return checklist;
 };
 
@@ -196,15 +335,15 @@ const normalizeReviewChecklist = (payload = {}, files = {}, existingChecklist = 
     };
   });
 
-  const totalSupporting = Array.isArray(files.supportingDocuments)
-    ? files.supportingDocuments.filter(fileExists).length
-    : 0;
-  checklist.supportingDocuments = Array.from({ length: totalSupporting }, (_, index) => {
-    const source = payload?.supportingDocuments?.[index] || existingChecklist?.supportingDocuments?.[index] || {};
-    return {
-      checked: Boolean(source.checked),
-      remarks: String(source.remarks || '').trim(),
-    };
+  REVIEWABLE_ARRAY_FIELDS.forEach((field) => {
+    const totalItems = Array.isArray(files[field]) ? files[field].filter(fileExists).length : 0;
+    checklist[field] = Array.from({ length: totalItems }, (_, index) => {
+      const source = payload?.[field]?.[index] || existingChecklist?.[field]?.[index] || {};
+      return {
+        checked: Boolean(source.checked),
+        remarks: String(source.remarks || '').trim(),
+      };
+    });
   });
 
   return checklist;
@@ -217,11 +356,10 @@ const isReviewChecklistComplete = (files = {}, reviewChecklist = {}) => {
     }
   }
 
-  const supportingDocuments = Array.isArray(files.supportingDocuments)
-    ? files.supportingDocuments.filter(fileExists)
-    : [];
-
-  return supportingDocuments.every((_, index) => reviewChecklist?.supportingDocuments?.[index]?.checked);
+  return REVIEWABLE_ARRAY_FIELDS.every((field) => {
+    const items = Array.isArray(files[field]) ? files[field].filter(fileExists) : [];
+    return items.every((_, index) => reviewChecklist?.[field]?.[index]?.checked);
+  });
 };
 
 const safe = (doc) => {
@@ -241,7 +379,9 @@ const getUploadedFiles = (req) => {
   SINGLE_FILE_FIELDS.forEach((field) => {
     map[field] = req.files?.[field]?.[0] || null;
   });
-  map.supportingDocuments = req.files?.supportingDocuments || [];
+  MULTI_FILE_FIELDS.forEach((field) => {
+    map[field] = req.files?.[field] || [];
+  });
   return map;
 };
 
@@ -274,25 +414,25 @@ const validateUploadedTypes = (uploadedFiles) => {
   if (uploadedFiles.executiveBriefWord && !isWord(uploadedFiles.executiveBriefWord)) return 'Executive Brief Word must be a Word file';
   if (uploadedFiles.proposalPdf && !isPdf(uploadedFiles.proposalPdf)) return 'Proposal PDF must be a PDF file';
   if (uploadedFiles.proposalWord && !isWord(uploadedFiles.proposalWord)) return 'Proposal Word must be a Word file';
+  if (uploadedFiles.summaryMatrixPdf && !isPdf(uploadedFiles.summaryMatrixPdf)) return 'Summary Matrix must be a PDF file';
+  if (uploadedFiles.copyOfMoaMouPdf && !isPdf(uploadedFiles.copyOfMoaMouPdf)) return 'Copy of MOA/MOU must be a PDF file';
   if (uploadedFiles.presentationPdf && !isPdf(uploadedFiles.presentationPdf)) return 'Presentation PDF must be a PDF file';
   if (uploadedFiles.forInformationProposalPdf && !isPdf(uploadedFiles.forInformationProposalPdf)) return 'Proposal PDF must be a PDF file';
+  if (uploadedFiles.copyOfUsufructPdf && !isPdf(uploadedFiles.copyOfUsufructPdf)) return 'Copy of Usufruct must be a PDF file';
+  if (uploadedFiles.copyOfDeedOfDonationPdf && !isPdf(uploadedFiles.copyOfDeedOfDonationPdf)) return 'Copy of Deed of Donation must be a PDF file';
   if (uploadedFiles.legalEndorsementPdf && !isPdf(uploadedFiles.legalEndorsementPdf)) return 'Legal Endorsement must be a PDF file';
-  if (uploadedFiles.vpafFanCertificationPdf && !isPdf(uploadedFiles.vpafFanCertificationPdf)) return 'VPAF/FMS Certification must be a PDF file';
-  if (uploadedFiles.vpaaAcademicCouncilPdf && !isPdf(uploadedFiles.vpaaAcademicCouncilPdf)) return 'VPAA/Administrative Council must be a PDF file';
-  if (uploadedFiles.vprgesProductionCouncilPdf && !isPdf(uploadedFiles.vprgesProductionCouncilPdf)) return 'VPRGES/Production Council must be a PDF file';
-  if (uploadedFiles.vprdeUrdecPdf && !isPdf(uploadedFiles.vprdeUrdecPdf)) return 'VPRDE/URDEC must be a PDF file';
-  if (uploadedFiles.supportingDocuments.some((item) => !ALLOWED_MIMES.includes(item.mimetype))) return 'Supporting documents must be PDF or Word files';
+  if (MULTI_FILE_FIELDS.some((field) => uploadedFiles[field].some((item) => !isPdf(item)))) return 'Supporting and endorsement documents must be PDF files';
 
   const pdfFields = [
     ['Executive Brief PDF', uploadedFiles.executiveBriefPdf],
     ['Proposal PDF', uploadedFiles.proposalPdf],
+    ['Summary Matrix', uploadedFiles.summaryMatrixPdf],
+    ['Copy of MOA/MOU', uploadedFiles.copyOfMoaMouPdf],
     ['Presentation PDF', uploadedFiles.presentationPdf],
     ['For Information Proposal PDF', uploadedFiles.forInformationProposalPdf],
+    ['Copy of Usufruct', uploadedFiles.copyOfUsufructPdf],
+    ['Copy of Deed of Donation', uploadedFiles.copyOfDeedOfDonationPdf],
     ['Legal Endorsement', uploadedFiles.legalEndorsementPdf],
-    ['VPAF/FMS Certification', uploadedFiles.vpafFanCertificationPdf],
-    ['VPAA/Administrative Council', uploadedFiles.vpaaAcademicCouncilPdf],
-    ['VPRGES/Production Council', uploadedFiles.vprgesProductionCouncilPdf],
-    ['VPRDE/URDEC', uploadedFiles.vprdeUrdecPdf],
   ];
 
   for (const [label, file] of pdfFields) {
@@ -308,9 +448,10 @@ const validateUploadedTypes = (uploadedFiles) => {
     if (file && !isWordBuffer(file)) return `${label} is not a valid Word file`;
   }
 
-  for (const file of uploadedFiles.supportingDocuments) {
-    if (isPdf(file) && !isPdfBuffer(file)) return 'One of the supporting documents is not a valid PDF file';
-    if (isWord(file) && !isWordBuffer(file)) return 'One of the supporting documents is not a valid Word file';
+  for (const field of MULTI_FILE_FIELDS) {
+    for (const file of uploadedFiles[field]) {
+      if (!isPdfBuffer(file)) return 'One of the supporting or endorsement documents is not a valid PDF file';
+    }
   }
 
   return null;
@@ -318,22 +459,25 @@ const validateUploadedTypes = (uploadedFiles) => {
 
 const mergeFiles = async (existingFiles = {}, uploadedFiles = {}, proposalType = '') => {
   const merged = clonePacketFiles(existingFiles);
+  const rule = getProposalRule(proposalType);
+  const visibleSingle = new Set(rule.visibleSingle || []);
+  const visibleMulti = new Set(rule.visibleMulti || []);
 
-  if (proposalType === 'For Information') {
-    merged.executiveBriefPdf = {};
-    merged.executiveBriefWord = {};
-    merged.proposalPdf = {};
-    merged.proposalWord = {};
-    merged.supportingDocuments = [];
-    merged.legalEndorsementPdf = {};
-    merged.vpafFanCertificationPdf = {};
-    merged.vpaaAcademicCouncilPdf = {};
-    merged.vprgesProductionCouncilPdf = {};
-    merged.vprdeUrdecPdf = {};
-  } else {
-    merged.presentationPdf = {};
-    merged.forInformationProposalPdf = {};
-  }
+  SINGLE_FILE_FIELDS.forEach((field) => {
+    if (!visibleSingle.has(field)) {
+      merged[field] = {};
+    }
+  });
+
+  MULTI_FILE_FIELDS.forEach((field) => {
+    if (!visibleMulti.has(field)) {
+      merged[field] = [];
+    }
+  });
+
+  LEGACY_SINGLE_FIELDS.forEach((field) => {
+    merged[field] = {};
+  });
 
   for (const field of SINGLE_FILE_FIELDS) {
     const file = uploadedFiles[field];
@@ -348,11 +492,12 @@ const mergeFiles = async (existingFiles = {}, uploadedFiles = {}, proposalType =
     };
   }
 
-  if (uploadedFiles.supportingDocuments?.length) {
-    const supportingDocuments = [];
-    for (const file of uploadedFiles.supportingDocuments) {
+  for (const field of MULTI_FILE_FIELDS) {
+    if (!uploadedFiles[field]?.length) continue;
+    const files = [];
+    for (const file of uploadedFiles[field]) {
       const s3Key = await uploadToS3(file.originalname, file.buffer, file.mimetype);
-      supportingDocuments.push({
+      files.push({
         filename: file.originalname,
         data: s3Key ? undefined : file.buffer,
         s3Key: s3Key || undefined,
@@ -360,7 +505,7 @@ const mergeFiles = async (existingFiles = {}, uploadedFiles = {}, proposalType =
         uploadedAt: new Date(),
       });
     }
-    merged.supportingDocuments = supportingDocuments;
+    merged[field] = files;
   }
 
   return merged;
@@ -369,6 +514,7 @@ const mergeFiles = async (existingFiles = {}, uploadedFiles = {}, proposalType =
 const validateSubmissionPayload = ({ body, mergedFiles, requireAnyUpload }) => {
   const documentTitle = String(body.documentTitle || '').trim();
   const proposalType = String(body.proposalType || '').trim();
+  const rule = getProposalRule(proposalType);
 
   if (!documentTitle || !proposalType) {
     return 'Proposal title and proposal type are required';
@@ -376,26 +522,44 @@ const validateSubmissionPayload = ({ body, mergedFiles, requireAnyUpload }) => {
   if (!PROPOSAL_TYPES.includes(proposalType)) {
     return 'Invalid proposal type';
   }
-  if (proposalType === 'For Information') {
-    if (!fileExists(mergedFiles.presentationPdf) && !fileExists(mergedFiles.forInformationProposalPdf)) {
+
+  if (requireAnyUpload) {
+    const hasAny = [...SINGLE_FILE_FIELDS, ...MULTI_FILE_FIELDS].some((field) => {
+      if (MULTI_FILE_FIELDS.includes(field)) return arrayHasFiles(mergedFiles[field]);
+      return fileExists(mergedFiles[field]);
+    });
+    if (!hasAny) return 'At least one file must be uploaded';
+  }
+
+  if (rule.requiresAnyOf?.length) {
+    const hasAnyRequiredOption = rule.requiresAnyOf.some((field) => fileExists(mergedFiles[field]));
+    if (!hasAnyRequiredOption) {
       return 'At least one of Presentation PDF or Proposal PDF is required';
     }
   }
 
-  if (requireAnyUpload) {
-    const hasAny = SINGLE_FILE_FIELDS.some((field) => fileExists(mergedFiles[field])) || mergedFiles.supportingDocuments?.length;
-    if (!hasAny) return 'At least one file must be uploaded';
+  for (const field of rule.requiredSingle || []) {
+    if (!fileExists(mergedFiles[field])) {
+      return `${field
+        .replace(/Pdf$/, ' PDF')
+        .replace(/([A-Z])/g, ' $1')
+        .replace(/^./, (char) => char.toUpperCase())} is required`;
+    }
   }
 
-  if (proposalType !== 'For Information') {
-    if (!fileExists(mergedFiles.executiveBriefPdf)) return 'Executive Brief PDF is required';
-    if (!fileExists(mergedFiles.executiveBriefWord)) return 'Executive Brief Word file is required';
-    if (!fileExists(mergedFiles.proposalPdf)) return 'Proposal PDF is required';
-    if (!fileExists(mergedFiles.proposalWord)) return 'Proposal Word file is required';
+  for (const field of rule.requiredMulti || []) {
+    if (!arrayHasFiles(mergedFiles[field])) {
+      const label = field
+        .replace(/Pdfs$/, '')
+        .replace(/Documents$/, ' Documents')
+        .replace(/([A-Z])/g, ' $1')
+        .replace(/^./, (char) => char.toUpperCase());
+      return `At least one ${label} file is required`;
+    }
   }
-  if (proposalType !== 'For Information') {
-    if (!fileExists(mergedFiles.legalEndorsementPdf)) return 'Legal Endorsement PDF is required';
-    if (!fileExists(mergedFiles.vpafFanCertificationPdf)) return 'VPAF/FMS Certification PDF is required';
+
+  if (rule.requireIasCategory && !String(body.iasEndorsementCategory || '').trim()) {
+    return 'IAS Endorsement selection is required';
   }
 
   return null;
@@ -432,18 +596,32 @@ const defaultFileKey = (submission) => {
     'forInformationProposalPdf',
     'proposalPdf',
     'executiveBriefPdf',
+    'copyOfUsufructPdf',
+    'copyOfDeedOfDonationPdf',
     'legalEndorsementPdf',
-    'vpafFanCertificationPdf',
+    'vpafFanCertificationPdfs',
+    'vpaaAdministrativeCouncilPdfs',
+    'vprgesProductionCouncilPdfs',
+    'vprdeUrdecPdfs',
+    'officeOfPresidentPdfs',
+    'iasEndorsementPdfs',
+    'supportingDocuments',
     'proposalWord',
     'executiveBriefWord',
   ];
-  return priority.find((field) => fileExists(submission.files?.[field])) || null;
+  return priority.find((field) => {
+    if (MULTI_FILE_FIELDS.includes(field)) return arrayHasFiles(submission.files?.[field]);
+    return fileExists(submission.files?.[field]);
+  }) || null;
 };
 
 const getFileFromPacket = (packetFiles, key, index) => {
   if (!packetFiles) return null;
-  if (key === 'supportingDocuments') {
-    return Array.isArray(packetFiles.supportingDocuments) ? packetFiles.supportingDocuments[index] || null : null;
+  if (MULTI_FILE_FIELDS.includes(key)) {
+    const files = Array.isArray(packetFiles[key]) && packetFiles[key].length > 0
+      ? packetFiles[key]
+      : (LEGACY_ARRAY_COMPATIBILITY[key] && fileExists(packetFiles[LEGACY_ARRAY_COMPATIBILITY[key]]) ? [packetFiles[LEGACY_ARRAY_COMPATIBILITY[key]]] : []);
+    return files[index] || null;
   }
   return packetFiles[key] || null;
 };
@@ -501,6 +679,7 @@ exports.createSubmission = async (req, res) => {
       collegeUnit: council.councilName,
       documentTitle: String(req.body.documentTitle || '').trim(),
       proposalType,
+      iasEndorsementCategory: String(req.body.iasEndorsementCategory || '').trim(),
       forInformationType: '',
       meetingDate: '',
       submissionDate: '',
@@ -558,7 +737,10 @@ exports.replaceSubmission = async (req, res) => {
     const validationError = validateSubmissionPayload({ body, mergedFiles, requireAnyUpload: false });
     if (validationError) return res.status(400).json({ message: validationError });
 
-    if (SINGLE_FILE_FIELDS.some((field) => fileExists(submission.files?.[field])) || submission.files?.supportingDocuments?.length) {
+    if ([...SINGLE_FILE_FIELDS, ...MULTI_FILE_FIELDS].some((field) => {
+      if (MULTI_FILE_FIELDS.includes(field)) return arrayHasFiles(submission.files?.[field]);
+      return fileExists(submission.files?.[field]);
+    })) {
       submission.packetHistory.push({
         version: submission.packetVersion || 1,
         uploadedAt: new Date(),
@@ -568,6 +750,7 @@ exports.replaceSubmission = async (req, res) => {
 
     submission.documentTitle = String(body.documentTitle || '').trim();
     submission.proposalType = proposalType;
+    submission.iasEndorsementCategory = String(req.body.iasEndorsementCategory || '').trim();
     submission.forInformationType = '';
     submission.files = mergedFiles;
     submission.reviewChecklist = buildReviewChecklist(mergedFiles);
