@@ -28,6 +28,17 @@ const storageConfig = {
   forcePathStyle: (process.env.SPACES_FORCE_PATH_STYLE || process.env.S3_FORCE_PATH_STYLE) === 'true',
 };
 
+const shouldFallbackToBufferStorage = (error) => {
+  const code = String(error?.Code || error?.code || '');
+  const message = String(error?.message || '');
+
+  return code === 'InvalidAccessKeyId'
+    || code === 'SignatureDoesNotMatch'
+    || code === 'CredentialsProviderError'
+    || message.includes('The access key ID you provided does not exist in our records')
+    || message.includes('Resolved credential object is not valid');
+};
+
 const isS3Configured = !!(
   storageConfig.key &&
   storageConfig.secret &&
@@ -103,7 +114,16 @@ const uploadToS3 = async (filename, buffer, contentType) => {
     ContentType: contentType || 'application/pdf',
   };
 
-  await s3Client.send(new PutObjectCommand(params));
+  try {
+    await s3Client.send(new PutObjectCommand(params));
+  } catch (error) {
+    if (shouldFallbackToBufferStorage(error)) {
+      console.warn(`Remote storage upload failed; falling back to MongoDB buffer storage: ${error.message}`);
+      return null;
+    }
+    throw error;
+  }
+
   return uniqueKey;
 };
 
