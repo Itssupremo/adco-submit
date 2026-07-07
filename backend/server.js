@@ -14,6 +14,8 @@ const cors = require('cors');
 const { seedData } = require('./seed');
 const { isLocalAuthEnabled } = require('./utils/localAuth');
 
+const mongoUri = process.env.MONGODB_URI || process.env.DATABASE_URL || process.env.MONGO_URI;
+
 const app = express();
 
 // Middleware
@@ -94,7 +96,10 @@ const connectDB = async () => {
     return;
   }
   if (isConnected) return;
-  await mongoose.connect(process.env.MONGO_URI);
+  if (!mongoUri) {
+    throw new Error('Missing MongoDB connection string. Set MONGODB_URI, DATABASE_URL, or MONGO_URI.');
+  }
+  await mongoose.connect(mongoUri);
   isConnected = true;
   console.log('MongoDB connected');
 

@@ -3,25 +3,34 @@ const path = require('path');
 const crypto = require('crypto');
 const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 
+const storageConfig = {
+  key: process.env.SPACES_KEY || process.env.S3_KEY,
+  secret: process.env.SPACES_SECRET || process.env.S3_SECRET,
+  bucket: process.env.SPACES_BUCKET || process.env.S3_BUCKET,
+  region: process.env.SPACES_REGION || process.env.S3_REGION || 'sfo3',
+  endpoint: process.env.SPACES_ENDPOINT || process.env.S3_ENDPOINT,
+  forcePathStyle: (process.env.SPACES_FORCE_PATH_STYLE || process.env.S3_FORCE_PATH_STYLE) === 'true',
+};
+
 const isS3Configured = !!(
-  process.env.S3_KEY &&
-  process.env.S3_SECRET &&
-  process.env.S3_BUCKET
+  storageConfig.key &&
+  storageConfig.secret &&
+  storageConfig.bucket
 );
 
 let s3Client = null;
 if (isS3Configured) {
   const config = {
     credentials: {
-      accessKeyId: process.env.S3_KEY,
-      secretAccessKey: process.env.S3_SECRET,
+      accessKeyId: storageConfig.key,
+      secretAccessKey: storageConfig.secret,
     },
-    region: process.env.S3_REGION || 'us-east-1',
+    region: storageConfig.region,
   };
-  if (process.env.S3_ENDPOINT) {
-    config.endpoint = process.env.S3_ENDPOINT;
+  if (storageConfig.endpoint) {
+    config.endpoint = storageConfig.endpoint;
     // For services like DO Spaces, forcePathStyle might be required.
-    config.forcePathStyle = process.env.S3_FORCE_PATH_STYLE === 'true';
+    config.forcePathStyle = storageConfig.forcePathStyle;
   }
   s3Client = new S3Client(config);
 }
@@ -70,7 +79,7 @@ const uploadToS3 = async (filename, buffer, contentType) => {
   }
 
   const params = {
-    Bucket: process.env.S3_BUCKET,
+    Bucket: storageConfig.bucket,
     Key: uniqueKey,
     Body: buffer,
     ContentType: contentType || 'application/pdf',
@@ -97,7 +106,7 @@ const getFromS3 = async (key) => {
   }
 
   const params = {
-    Bucket: process.env.S3_BUCKET,
+    Bucket: storageConfig.bucket,
     Key: key,
   };
 
@@ -133,7 +142,7 @@ const deleteFromS3 = async (key) => {
   }
 
   const params = {
-    Bucket: process.env.S3_BUCKET,
+    Bucket: storageConfig.bucket,
     Key: key,
   };
 

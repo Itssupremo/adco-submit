@@ -8,6 +8,8 @@ const Notification = require('./models/Notification');
 const SystemSetting = require('./models/SystemSetting');
 const ActivityLog = require('./models/ActivityLog');
 
+const mongoUri = process.env.MONGODB_URI || process.env.DATABASE_URL || process.env.MONGO_URI;
+
 const COUNCILS = [
   {
     councilName: 'Administrative Council for Academic Affairs',
@@ -109,7 +111,10 @@ async function seedData() {
 
 async function seed() {
   try {
-    await mongoose.connect(process.env.MONGO_URI);
+    if (!mongoUri) {
+      throw new Error('Missing MongoDB connection string. Set MONGODB_URI, DATABASE_URL, or MONGO_URI.');
+    }
+    await mongoose.connect(mongoUri);
     console.log('MongoDB connected for seeding');
     await seedData();
     process.exit(0);

@@ -5,9 +5,16 @@
 
 ## Quick Start
 
+### Environment
+Create [backend/.env.example](c:/Users/Localuser/IanGwapo/abbi-submit/backend/.env.example) as `backend/.env` and fill in your values.
+
+For DigitalOcean Spaces file storage, this project now accepts either `SPACES_*` or `S3_*` variables.
+
+For MongoDB, this project accepts `MONGODB_URI`, `DATABASE_URL`, or `MONGO_URI`.
+
 ### Prerequisites
 - Node.js (v18+)
-- MongoDB running on `mongodb://136.158.10.56:27017`
+- A MongoDB database connection string
 
 ### 1. Seed the Database
 ```bash
