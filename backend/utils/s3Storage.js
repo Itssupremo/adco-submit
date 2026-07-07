@@ -4,12 +4,27 @@ const path = require('path');
 const crypto = require('crypto');
 const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 
+const normalizeStorageEndpoint = (endpoint, bucket) => {
+  if (!endpoint) return endpoint;
+
+  try {
+    const parsed = new URL(endpoint);
+    if (bucket && parsed.hostname.toLowerCase().startsWith(`${bucket.toLowerCase()}.`)) {
+      parsed.hostname = parsed.hostname.slice(bucket.length + 1);
+      return parsed.toString().replace(/\/$/, '');
+    }
+    return parsed.toString().replace(/\/$/, '');
+  } catch {
+    return endpoint.replace(/\/$/, '');
+  }
+};
+
 const storageConfig = {
   key: process.env.SPACES_KEY || process.env.S3_KEY,
   secret: process.env.SPACES_SECRET || process.env.S3_SECRET,
   bucket: process.env.SPACES_BUCKET || process.env.S3_BUCKET,
   region: process.env.SPACES_REGION || process.env.S3_REGION || 'sfo3',
-  endpoint: process.env.SPACES_ENDPOINT || process.env.S3_ENDPOINT,
+  endpoint: normalizeStorageEndpoint(process.env.SPACES_ENDPOINT || process.env.S3_ENDPOINT, process.env.SPACES_BUCKET || process.env.S3_BUCKET),
   forcePathStyle: (process.env.SPACES_FORCE_PATH_STYLE || process.env.S3_FORCE_PATH_STYLE) === 'true',
 };
 
