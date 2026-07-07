@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { isLocalAuthEnabled, findLocalUserById, sanitizeUser } = require('../utils/localAuth');
 
 // Verify JWT token
 const authenticate = async (req, res, next) => {
@@ -10,8 +11,18 @@ const authenticate = async (req, res, next) => {
   try {
     const token = header.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    if (isLocalAuthEnabled()) {
+      const localUser = findLocalUserById(decoded.id);
+      if (!localUser) return res.status(401).json({ message: 'User not found' });
+      if (!localUser.isActive) return res.status(403).json({ message: 'Account is inactive' });
+      req.user = sanitizeUser(localUser);
+      return next();
+    }
+
     const user = await User.findById(decoded.id).select('-password');
     if (!user) return res.status(401).json({ message: 'User not found' });
+    if (!user.isActive) return res.status(403).json({ message: 'Account is inactive' });
     req.user = user;
     next();
   } catch {
@@ -27,33 +38,31 @@ const superAdminOnly = (req, res, next) => {
   next();
 };
 
-// Admin or above (superadmin + admin)
-const adminOrAbove = (req, res, next) => {
-  if (!['superadmin', 'admin'].includes(req.user.role)) {
-    return res.status(403).json({ message: 'Admin access required' });
+const boardOnly = (req, res, next) => {
+  if (req.user.role !== 'board') {
+    return res.status(403).json({ message: 'USM Board access required' });
   }
   next();
 };
 
-// Manager or above (superadmin + admin + SUC user)
-const managerOrAbove = (req, res, next) => {
-  if (!['superadmin', 'admin', 'user'].includes(req.user.role)) {
-    return res.status(403).json({ message: 'Access denied: Manager permission required' });
+const councilOnly = (req, res, next) => {
+  if (req.user.role !== 'council') {
+    return res.status(403).json({ message: 'Administrative Council access required' });
   }
   next();
 };
 
-// Legacy alias kept for existing routes
-const adminOnly = adminOrAbove;
-
-// Section access guard for SUC modifications
-const userSectionAccess = (req, res, next) => {
-  if (['superadmin', 'admin'].includes(req.user.role)) return next();
-  const { section } = req.body;
-  if (section && !['Chairperson', 'Commissioner'].includes(section)) {
-    return res.status(403).json({ message: 'You can only manage Chairperson or Commissioner sections' });
+const boardOrSuperAdmin = (req, res, next) => {
+  if (!['superadmin', 'board'].includes(req.user.role)) {
+    return res.status(403).json({ message: 'Board or Super Admin access required' });
   }
   next();
 };
 
-module.exports = { authenticate, superAdminOnly, adminOrAbove, managerOrAbove, adminOnly, userSectionAccess };
+module.exports = {
+  authenticate,
+  superAdminOnly,
+  boardOnly,
+  councilOnly,
+  boardOrSuperAdmin,
+};

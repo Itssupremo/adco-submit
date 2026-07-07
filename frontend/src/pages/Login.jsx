@@ -1,18 +1,22 @@
-import { useState, useEffect } from 'react';
-import { login as loginApi, loginByEmail as loginByEmailApi } from '../services/api'; // loginByEmailApi used by Google Sign-In
+import { useEffect, useRef, useState } from 'react';
+import { login as loginApi, loginByEmail as loginByEmailApi } from '../services/api';
 
-const font = "'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif";
+const font = "'Montserrat', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif";
 
-const STATS = [
-  { value: '113', label: 'SUCs Covered' },
-  { value: '3', label: 'Access Levels' },
-  { value: '100%', label: 'Secure' },
+const FEATURE_PILLS = [
+  { icon: 'bi-cloud-arrow-up-fill', label: 'Store' },
+  { icon: 'bi-folder2-open', label: 'Organize' },
+  { icon: 'bi-send-fill', label: 'Submit' },
+  { icon: 'bi-shield-check', label: 'Track' },
 ];
 
-const FEATURES = [
-  { icon: 'bi-file-earmark-richtext', title: 'Agenda Management', desc: 'Organize and track board meeting documents in one place.' },
-  { icon: 'bi-shield-lock', title: 'Secure Storage', desc: 'Official SUC documents protected with role-based access.' },
-  { icon: 'bi-people', title: 'Multi-Role Access', desc: 'Super Admin, Chairperson & Commissioner, and SUC account tiers.' },
+const MASCOT_IMAGE = '/mascot.png';
+const PANEL_BG_IMAGE = '/Usm background.png';
+
+const PANEL_POINTS = [
+  'Centralized proposal storage',
+  'Board review and approval workflow',
+  'Administrative Council submission tracking',
 ];
 
 const LockIcon = () => (
@@ -25,14 +29,12 @@ const LockIcon = () => (
 function Login({ onLogin }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError]       = useState('');
-  const [loading, setLoading]   = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
-  const [focusUser, setFocusUser] = useState(false);
-  const [focusPass, setFocusPass] = useState(false);
+  const usernameRef = useRef(null);
 
-  // Load Google Identity Services script once
   useEffect(() => {
     if (document.getElementById('gsi-script')) return;
     const script = document.createElement('script');
@@ -42,14 +44,20 @@ function Login({ onLogin }) {
     document.head.appendChild(script);
   }, []);
 
+  const focusLogin = () => {
+    usernameRef.current?.focus();
+  };
+
   const handleGoogleSignIn = () => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
     if (!window.google || !clientId || clientId.startsWith('YOUR_')) {
       setError('Google Sign-In is not configured. Please contact the administrator.');
       return;
     }
+
     setGoogleLoading(true);
     setError('');
+
     const tokenClient = window.google.accounts.oauth2.initTokenClient({
       client_id: clientId,
       scope: 'email profile',
@@ -70,6 +78,7 @@ function Login({ onLogin }) {
         }
       },
     });
+
     tokenClient.requestAccessToken({ prompt: 'select_account' });
   };
 
@@ -77,6 +86,7 @@ function Login({ onLogin }) {
     e.preventDefault();
     setError('');
     setLoading(true);
+
     try {
       const formData = new FormData(e.currentTarget);
       const submittedUsername = (formData.get('username') || username || '').toString().trim();
@@ -91,601 +101,679 @@ function Login({ onLogin }) {
   };
 
   return (
-    <div className="login-outer" style={{
-      position: 'fixed', inset: 0,
-      display: 'flex',
-      fontFamily: font,
-    }}>
+    <div className="login-shell" style={{ fontFamily: font }}>
       <style>{`
-        .login-outer { overflow-y: auto; }
-        .login-left { display: flex; }
-        .login-right { flex: 1 1 50%; }
-        
-        @keyframes float {
-          0% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-10px) rotate(2deg); }
-          100% { transform: translateY(0px) rotate(0deg); }
+        .login-shell {
+          --brand-navy: #17327e;
+          --brand-navy-soft: #3958b8;
+          --accent-green: #2f8f63;
+          --accent-green-deep: #236f4d;
+          --accent-green-soft: #edf8f1;
+          --border-soft: #dbe4f4;
+          --text-muted: #66789d;
+          min-height: 100vh;
+          display: grid;
+          grid-template-columns: minmax(0, 1.22fr) minmax(390px, 0.78fr);
+          background:
+            radial-gradient(circle at left top, rgba(102, 117, 236, 0.14), transparent 26%),
+            radial-gradient(circle at right top, rgba(59, 143, 99, 0.08), transparent 18%),
+            linear-gradient(180deg, #fbfcff 0%, #f4f7fb 100%);
+          color: var(--brand-navy);
+          overflow: hidden;
         }
-        @keyframes pulseGlow {
-          0% { opacity: 0.12; transform: scale(1); }
-          50% { opacity: 0.22; transform: scale(1.1); }
-          100% { opacity: 0.12; transform: scale(1); }
-        }
-        @keyframes fadeInSlideUp {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes pulseStatus {
-          0% { transform: scale(1); opacity: 1; }
-          50% { transform: scale(1.4); opacity: 0.4; }
-          100% { transform: scale(1); opacity: 1; }
-        }
-
-        .animate-float {
-          animation: float 8s ease-in-out infinite;
-        }
-        .animate-glow-1 {
-          animation: pulseGlow 10s ease-in-out infinite alternate;
-        }
-        .animate-glow-2 {
-          animation: pulseGlow 14s ease-in-out infinite alternate-reverse;
-        }
-        .animate-fade-in-up {
-          animation: fadeInSlideUp 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-        .pulse-dot {
+        .login-shell * { box-sizing: border-box; }
+        .login-visual {
           position: relative;
+          padding: 1.7rem 2.25rem 2rem;
+          overflow: hidden;
         }
-        .pulse-dot::after {
+        .login-visual::before {
           content: '';
           position: absolute;
-          inset: -2px;
-          border-radius: 50%;
-          background: inherit;
-          animation: pulseStatus 2s infinite ease-in-out;
+          inset: 0;
+          background-image:
+            linear-gradient(180deg, rgba(251,252,255,0.72) 0%, rgba(244,247,251,0.76) 100%),
+            url('${PANEL_BG_IMAGE}');
+          background-size: cover;
+          background-position: center;
+          background-repeat: no-repeat;
+          opacity: 100%;
+          pointer-events: none;
         }
-
+        .login-brand-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 1rem;
+          margin-bottom: 2rem;
+          position: relative;
+          z-index: 1;
+        }
+        .login-brand {
+          display: flex;
+          align-items: center;
+          gap: 0.9rem;
+        }
+        .login-brand img {
+          width: 44px;
+          height: 44px;
+          object-fit: contain;
+        }
+        .login-brand-name {
+          font-size: 1.1rem;
+          line-height: 0.95;
+          letter-spacing: -0.04em;
+          font-weight: 900;
+        }
+        .login-brand-name span { display: block; }
+        .login-nav {
+          display: flex;
+          align-items: center;
+          gap: 1.8rem;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+        }
+        .login-nav a {
+          color: var(--brand-navy);
+          text-decoration: none;
+          font-size: 0.94rem;
+          font-weight: 700;
+          opacity: 0.92;
+        }
+        .login-nav button {
+          border: none;
+          border-radius: 14px;
+          background: linear-gradient(135deg, var(--accent-green-deep) 0%, var(--accent-green) 100%);
+          color: #fff;
+          min-width: 96px;
+          height: 48px;
+          padding: 0 1.2rem;
+          font-size: 0.94rem;
+          font-weight: 800;
+          box-shadow: 0 14px 28px rgba(47, 143, 99, 0.22);
+          cursor: pointer;
+        }
+        .login-copy {
+          position: relative;
+          z-index: 2;
+          max-width: 620px;
+          padding-top: 2.6rem;
+        }
+        .login-copy h1 {
+          margin: 0;
+          font-size: clamp(3.2rem, 7vw, 5.8rem);
+          line-height: 0.92;
+          letter-spacing: -0.075em;
+          font-weight: 900;
+          color: var(--brand-navy);
+        }
+        .login-copy p {
+          margin: 1.5rem 0 0;
+          max-width: 30rem;
+          font-size: 1.22rem;
+          line-height: 1.45;
+          color: var(--text-muted);
+          font-weight: 500;
+        }
+        .login-pills {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 108px));
+          gap: 0.9rem;
+          margin-top: 1.85rem;
+        }
+        .login-copy-support {
+          margin-top: 1.5rem;
+          max-width: 31rem;
+        }
+        .login-copy-support p {
+          margin: 0;
+          color: var(--text-muted);
+          font-size: 1rem;
+          line-height: 1.6;
+          font-weight: 500;
+        }
+        .login-pill {
+          background: rgba(255,255,255,0.8);
+          border: 1px solid rgba(214, 222, 241, 0.95);
+          border-radius: 22px;
+          box-shadow: 0 12px 26px rgba(108, 120, 185, 0.08);
+          text-align: center;
+          padding: 0.82rem 0.6rem 0.76rem;
+        }
+        .login-pill-icon {
+          width: 42px;
+          height: 42px;
+          margin: 0 auto 0.55rem;
+          border-radius: 14px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.15rem;
+          color: var(--accent-green);
+          background: linear-gradient(180deg, #f4faf6 0%, #ecf7f0 100%);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.85), 0 8px 16px rgba(102, 148, 119, 0.12);
+        }
+        .login-pill span {
+          display: block;
+          font-size: 0.94rem;
+          font-weight: 800;
+          color: var(--brand-navy);
+        }
+        .login-stage {
+          position: absolute;
+          right: 0.5rem;
+          bottom: 0;
+          width: min(54vw, 720px);
+          height: min(66vh, 760px);
+          min-height: 480px;
+          pointer-events: none;
+        }
+        .login-stage-star,
+        .login-mascot-image {
+          position: absolute;
+        }
+        @keyframes starPulse {
+          0%, 100% { transform: scale(1); opacity: 0.8; }
+          50% { transform: scale(1.15); opacity: 1; }
+        }
+        @keyframes mascotFloat {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-10px); }
+        }
+        @keyframes panelReveal {
+          0% { opacity: 0; transform: translateY(18px) scale(0.985); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes fieldGlow {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(47, 143, 99, 0); }
+          50% { box-shadow: 0 0 0 8px rgba(47, 143, 99, 0.05); }
+        }
+        @keyframes badgePulse {
+          0%, 100% { box-shadow: 0 0 0 5px rgba(47, 143, 99, 0.12); }
+          50% { box-shadow: 0 0 0 9px rgba(47, 143, 99, 0.06); }
+        }
+        .login-stage-star {
+          color: rgba(155, 165, 236, 0.8);
+          font-size: 1rem;
+          animation: starPulse 4.2s ease-in-out infinite;
+        }
+        .login-stage-star.star-a { top: 14%; left: 58%; }
+        .login-stage-star.star-b { top: 22%; left: 46%; animation-delay: -1.4s; }
+        .login-stage-star.star-c { top: 18%; right: 18%; animation-delay: -2.6s; }
+        .login-mascot-image {
+          left: 10%;
+          bottom: -1%;
+          width: min(76%, 580px);
+          max-height: 92%;
+          object-fit: contain;
+          filter: drop-shadow(0 28px 40px rgba(57, 79, 171, 0.16));
+          animation: mascotFloat 6s ease-in-out infinite;
+        }
+        .login-panel {
+          position: relative;
+          background: linear-gradient(180deg, #17327e 0%, #050e29 100%);
+          border-left: 1px solid rgba(220, 229, 239, 0.88);
+          box-shadow: -18px 0 44px rgba(96, 107, 171, 0.05);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 2.25rem 1.6rem;
+          overflow: hidden;
+        }
         .login-card {
-          transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+          width: 100%;
+          max-width: 410px;
+          background: rgba(255,255,255,0.96);
+          border: 1px solid rgba(214, 225, 240, 0.96);
+          border-radius: 28px;
+          box-shadow: 0 20px 42px rgba(105, 117, 181, 0.1);
+          padding: 1.8rem 1.5rem 1.35rem;
+          backdrop-filter: blur(8px);
+          animation: panelReveal 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+          position: relative;
+          z-index: 1;
         }
-        .login-card:hover {
+        .login-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin-bottom: 1rem;
+          padding: 0.55rem 0.8rem;
+          border-radius: 999px;
+          background: var(--accent-green-soft);
+          border: 1px solid #cfead9;
+          color: var(--accent-green-deep);
+          font-size: 0.78rem;
+          font-weight: 800;
+        }
+        .login-badge-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: var(--accent-green);
+          box-shadow: 0 0 0 5px rgba(47, 143, 99, 0.12);
+          animation: badgePulse 2.4s ease-in-out infinite;
+        }
+        .login-card h2 {
+          margin: 0;
+          color: var(--brand-navy);
+          font-size: 1.92rem;
+          line-height: 1.02;
+          letter-spacing: -0.05em;
+          font-weight: 900;
+        }
+        .login-card p {
+          margin: 0.72rem 0 0;
+          color: var(--text-muted);
+          font-size: 0.96rem;
+          line-height: 1.55;
+        }
+        .login-points {
+          margin: 1rem 0 1.2rem;
+          padding: 0;
+          list-style: none;
+          display: grid;
+          gap: 0.68rem;
+        }
+        .login-points li {
+          display: flex;
+          align-items: center;
+          gap: 0.7rem;
+          color: #496087;
+          font-size: 0.88rem;
+          font-weight: 600;
+        }
+        .login-points i { color: var(--accent-green); }
+        .login-copy-support .login-points {
+          margin: 0.95rem 0 0;
+          gap: 0.62rem;
+        }
+        .login-copy-support .login-points li {
+          color: #486083;
+        }
+        .login-error {
+          display: flex;
+          align-items: center;
+          gap: 0.65rem;
+          margin-bottom: 1rem;
+          padding: 0.8rem 0.95rem;
+          border-radius: 16px;
+          border: 1px solid #ffcccc;
+          background: #fff1f1;
+          color: #d73939;
+          font-size: 0.86rem;
+          font-weight: 600;
+        }
+        .login-form {
+          display: grid;
+          gap: 0.95rem;
+        }
+        .login-field label {
+          display: block;
+          margin-bottom: 0.42rem;
+          color: #5c6f90;
+          font-size: 0.74rem;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+        }
+        .login-input-wrap { position: relative; }
+        .login-input-icon {
+          position: absolute;
+          left: 14px;
+          top: 50%;
+          transform: translateY(-50%);
+          font-size: 1rem;
+          color: #9aa6c7;
+          transition: color 0.18s ease;
+        }
+        .login-input-wrap:focus-within .login-input-icon {
+          color: #6675ec;
+        }
+        .login-input,
+        .login-toggle,
+        .login-submit,
+        .login-google {
+          font-family: ${font};
+        }
+        .login-input {
+          width: 100%;
+          height: 54px;
+          border-radius: 16px;
+          border: 1.5px solid var(--border-soft);
+          background: #f8fbf8;
+          padding: 0 46px 0 42px;
+          color: var(--brand-navy);
+          font-size: 0.95rem;
+          outline: none;
+          transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+        }
+        .login-input:focus {
+          border-color: var(--accent-green);
+          background: #fff;
+          box-shadow: 0 0 0 4px rgba(47, 143, 99, 0.12);
+          animation: fieldGlow 1.6s ease-in-out 1;
+        }
+        .login-toggle {
+          position: absolute;
+          right: 14px;
+          top: 50%;
+          transform: translateY(-50%);
+          border: none;
+          background: transparent;
+          color: #91a38f;
+          cursor: pointer;
+          padding: 0;
+        }
+        .login-submit {
+          width: 100%;
+          height: 56px;
+          border: none;
+          border-radius: 18px;
+          color: #fff;
+          background: linear-gradient(135deg, var(--accent-green-deep) 0%, var(--accent-green) 100%);
+          font-size: 1rem;
+          font-weight: 800;
+          box-shadow: 0 14px 24px rgba(47, 143, 99, 0.2);
+          cursor: pointer;
+          transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+        }
+        .login-submit:hover:not(:disabled) {
           transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.03), 0 16px 40px rgba(13,27,62,0.12) !important;
+          box-shadow: 0 18px 28px rgba(47, 143, 99, 0.24);
+          filter: saturate(1.05);
         }
-
-        .stat-chip {
-          transition: all 0.25s ease;
+        .login-submit:disabled,
+        .login-google:disabled { cursor: not-allowed; opacity: 0.76; box-shadow: none; }
+        .login-divider {
+          display: flex;
+          align-items: center;
+          gap: 0.8rem;
+          margin: 1rem 0;
         }
-        .stat-chip:hover {
+        .login-divider::before,
+        .login-divider::after {
+          content: '';
+          flex: 1;
+          height: 1px;
+          background: #e3e9ef;
+        }
+        .login-divider span {
+          color: #91a0ad;
+          font-size: 0.74rem;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+        }
+        .login-google {
+          width: 100%;
+          height: 52px;
+          border-radius: 16px;
+          border: 1.5px solid var(--border-soft);
+          background: #fff;
+          color: #365083;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.7rem;
+          font-size: 0.92rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .login-google:hover:not(:disabled) {
           transform: translateY(-2px);
-          background: rgba(255,255,255,0.13) !important;
-          border-color: rgba(251,191,36,0.3) !important;
+          border-color: #c9d9d0;
+          box-shadow: 0 12px 22px rgba(116, 138, 130, 0.08);
         }
-
-        .input-wrapper input {
-          transition: all 0.2s ease;
+        .login-footer {
+          margin-top: 1rem;
+          padding-top: 1rem;
+          border-top: 1px solid #eef3ef;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.55rem;
+          color: #7b8c89;
+          font-size: 0.78rem;
+          text-align: center;
         }
-        .input-wrapper input:focus {
-          border-color: #2563eb !important;
-          background: #fff !important;
-          box-shadow: 0 0 0 4px rgba(37,99,235,0.12) !important;
+        .login-footer strong { color: var(--accent-green-deep); }
+        @media (prefers-reduced-motion: reduce) {
+          .login-stage-star,
+          .login-mascot-image,
+          .login-card,
+          .login-badge-dot,
+          .login-input:focus {
+            animation: none !important;
+          }
+          .login-submit,
+          .login-google {
+            transition: none !important;
+          }
         }
-
-        @media (max-width: 767px) {
-          .login-outer { flex-direction: column; }
-          .login-left { display: none !important; }
-          .login-right { flex: 1 1 100% !important; min-height: 100vh; padding: 2rem 1.25rem !important; }
+        @media (max-width: 1100px) {
+          .login-shell {
+            grid-template-columns: 1fr;
+          }
+          .login-panel {
+            border-left: none;
+            border-top: 1px solid rgba(214, 221, 244, 0.88);
+            box-shadow: none;
+          }
+          .login-visual {
+            min-height: 820px;
+          }
+          .login-stage {
+            left: 50%;
+            right: auto;
+            transform: translateX(-50%);
+            width: min(90vw, 720px);
+          }
+        }
+        @media (max-width: 760px) {
+          .login-visual {
+            padding: 1rem 1rem 1.5rem;
+            min-height: 700px;
+          }
+          .login-brand-row {
+            flex-direction: column;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+          }
+          .login-nav {
+            gap: 1rem;
+            justify-content: flex-start;
+          }
+          .login-copy {
+            padding-top: 0.5rem;
+          }
+          .login-copy p {
+            font-size: 1.05rem;
+          }
+          .login-copy-support {
+            max-width: 100%;
+          }
+          .login-pills {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            max-width: 320px;
+          }
+          .login-stage {
+            width: 100%;
+            min-height: 360px;
+            height: 400px;
+            bottom: -0.5rem;
+          }
+          .login-mascot-image {
+            left: 4%;
+            width: min(88%, 390px);
+          }
+          .login-panel {
+            padding: 1rem;
+          }
+          .login-card {
+            padding: 1.5rem 1rem 1.2rem;
+          }
         }
       `}</style>
 
-      {/* ══════════════════ LEFT PANEL — dark navy ══════════════════ */}
-      <div className="login-left" style={{
-        flex: '1 1 50%',
-        position: 'relative',
-        background: 'linear-gradient(150deg, #071221 0%, #0c1c44 50%, #082862 100%)',
-        flexDirection: 'column',
-        overflow: 'hidden',
-      }}>
+      <section className="login-visual">
+        <div className="login-brand-row">
+          <div className="login-brand">
+            <img src="/system-logo.jpeg" alt="USM BoardHub" />
+            <div className="login-brand-name">
+              <span>USM</span>
+              <span>BoardHUB</span>
+            </div>
+          </div>
 
-        {/* Ambient Glowing Orbs */}
-        <div className="animate-glow-1" style={{
-          position: 'absolute', top: '15%', left: '-15%',
-          width: '500px', height: '500px', borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(37,99,235,0.18) 0%, transparent 70%)',
-          filter: 'blur(60px)', pointerEvents: 'none'
-        }} />
-        <div className="animate-glow-2" style={{
-          position: 'absolute', bottom: '15%', right: '-10%',
-          width: '450px', height: '450px', borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(251,191,36,0.09) 0%, transparent 70%)',
-          filter: 'blur(70px)', pointerEvents: 'none'
-        }} />
-
-        {/* background sun decoration */}
-        <svg
-          viewBox="0 0 500 500"
-          className="animate-float"
-          style={{
-            position: 'absolute', right: -60, bottom: -60,
-            width: 440, height: 440, opacity: 0.06, pointerEvents: 'none',
-          }}
-          aria-hidden="true"
-        >
-          <circle cx="250" cy="250" r="120" fill="none" stroke="#fff" strokeWidth="2" />
-          <circle cx="250" cy="250" r="80" fill="none" stroke="#fff" strokeWidth="1.5" />
-          <circle cx="250" cy="250" r="45" fill="#fff" opacity="0.6" />
-          {[0,45,90,135,180,225,270,315].map((deg, i) => {
-            const rad = (deg * Math.PI) / 180;
-            const x1 = 250 + 90 * Math.cos(rad);
-            const y1 = 250 + 90 * Math.sin(rad);
-            const x2 = 250 + 175 * Math.cos(rad);
-            const y2 = 250 + 175 * Math.sin(rad);
-            return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#fff" strokeWidth="10" strokeLinecap="round" />;
-          })}
-          {[22.5,67.5,112.5,157.5,202.5,247.5,292.5,337.5].map((deg, i) => {
-            const rad = (deg * Math.PI) / 180;
-            const x1 = 250 + 90 * Math.cos(rad);
-            const y1 = 250 + 90 * Math.sin(rad);
-            const x2 = 250 + 145 * Math.cos(rad);
-            const y2 = 250 + 145 * Math.sin(rad);
-            return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#fff" strokeWidth="6" strokeLinecap="round" />;
-          })}
-        </svg>
-
-        {/* subtle dot-grid pattern */}
-        <svg
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.03, pointerEvents: 'none' }}
-          aria-hidden="true"
-        >
-          <defs>
-            <pattern id="dots" x="0" y="0" width="30" height="30" patternUnits="userSpaceOnUse">
-              <circle cx="2" cy="2" r="1.5" fill="#fff" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#dots)" />
-        </svg>
-
-        {/* top bar */}
-        <div style={{
-          position: 'relative', zIndex: 1,
-          padding: '1rem 2.5rem',
-          display: 'flex', alignItems: 'center', gap: 12,
-          borderBottom: '1px solid rgba(255,255,255,0.07)',
-          flexShrink: 0,
-        }}>
-          <img src="/ched-logo.png" alt="CHED" style={{ height: 30, filter: 'brightness(0) invert(1)' }} />
-          <div style={{ width: 1, height: 18, background: 'rgba(255,255,255,0.2)' }} />
-          <span style={{ fontFamily: font, fontWeight: 800, fontSize: '0.92rem', color: '#fff', letterSpacing: '-0.1px' }}>
-            e-Agenda <span style={{ color: '#fbbf24' }}>System</span>
-          </span>
-          <div style={{ marginLeft: 'auto' }}>
-            <img
-              src="/bp-logo-white.png"
-              alt="Bagong Pilipinas"
-              style={{ height: 30, opacity: 0.9 }}
-              onError={(e) => { e.target.style.display = 'none'; }}
-            />
+          <div className="login-nav">
+            <a href="#about">About</a>
+            <a href="#workflow">How it Works</a>
+            <a href="#login-card">FAQ</a>
+            <button type="button" onClick={focusLogin}>Login</button>
           </div>
         </div>
 
-        {/* main content */}
-        <div style={{
-          position: 'relative', zIndex: 1,
-          flex: 1,
-          display: 'flex', flexDirection: 'column', justifyContent: 'center',
-          alignItems: 'center',
-          padding: '2rem 3rem',
-          minHeight: 0,
-          overflow: 'hidden',
-        }}>
-          <div style={{ width: '100%', maxWidth: 440 }}>
+        <div className="login-copy" id="about">
+          <h1>
+            USM<br />
+            BoardHUB
+          </h1>
+          <p>
+            The centralized storage and submission system for Board of Regents-related Documents.
+          </p>
 
-            {/* E-Agenda logo — frosted glass container */}
-            <div style={{ marginBottom: '1.25rem' }}>
-              <div style={{
-                width: 68,
-                height: 68,
-                borderRadius: 16,
-                background: 'rgba(255,255,255,0.07)',
-                border: '1.5px solid rgba(255,255,255,0.16)',
-                backdropFilter: 'blur(12px)',
-                WebkitBackdropFilter: 'blur(12px)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-              }}>
-                <img
-                  src="/e-agenda-logo.png"
-                  alt="E-Agenda System"
-                  style={{ width: 52, height: 52, objectFit: 'contain' }}
+          <div className="login-pills" id="workflow">
+            {FEATURE_PILLS.map((item) => (
+              <div key={item.label} className="login-pill">
+                <div className="login-pill-icon"><i className={`bi ${item.icon}`} /></div>
+                <span>{item.label}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="login-copy-support">
+            <p>Access the board proposal workspace for review, submission, and tracking.</p>
+            <ul className="login-points">
+              {PANEL_POINTS.map((point) => (
+                <li key={point}><i className="bi bi-check-circle-fill" />{point}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        <div className="login-stage" aria-hidden="true">
+          <div className="login-stage-star star-a">✦</div>
+          <div className="login-stage-star star-b">✦</div>
+          <div className="login-stage-star star-c">✦</div>
+
+          <img className="login-mascot-image" src={MASCOT_IMAGE} alt="USM BoardHub mascot" />
+        </div>
+      </section>
+
+      <section className="login-panel">
+        <div className="login-card" id="login-card">
+          <div className="login-badge">
+            <span className="login-badge-dot" />
+            System Active
+          </div>
+
+          <h2>Login to BoardHub</h2>
+          <p>Sign in to continue managing proposals, reviews, and submission updates.</p>
+
+          {error ? (
+            <div className="login-error">
+              <i className="bi bi-exclamation-circle-fill" />
+              <span>{error}</span>
+            </div>
+          ) : null}
+
+          <form onSubmit={handleSubmit} className="login-form">
+            <div className="login-field">
+              <label htmlFor="login-username">Username</label>
+              <div className="login-input-wrap">
+                <span className="login-input-icon">
+                  <i className="bi bi-person" />
+                </span>
+                <input
+                  ref={usernameRef}
+                  id="login-username"
+                  className="login-input"
+                  type="text"
+                  name="username"
+                  placeholder="Enter your username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                  autoComplete="username"
+                  autoFocus
                 />
               </div>
             </div>
 
-            {/* gold accent bar */}
-            <div style={{
-              width: 40, height: 4, borderRadius: 2,
-              background: 'linear-gradient(90deg, #fbbf24, #f59e0b)',
-              marginBottom: '1rem',
-            }} />
-
-            <h1 style={{
-              fontFamily: font,
-              fontWeight: 900,
-              fontSize: 'clamp(1.5rem, 2.2vw, 2rem)',
-              color: '#fff',
-              lineHeight: 1.15,
-              margin: '0 0 0.75rem',
-              letterSpacing: '-0.5px',
-            }}>
-              Commission on<br />
-              <span style={{ color: '#fbbf24' }}>Higher Education</span><br />
-              e-Agenda Portal
-            </h1>
-
-            <p style={{
-              fontFamily: font,
-              color: 'rgba(255,255,255,0.65)',
-              fontSize: '0.85rem',
-              lineHeight: 1.55,
-              margin: '0 0 1.5rem',
-              maxWidth: 420,
-            }}>
-              A unified digital platform for managing board meeting agendas and compliance metrics across all
-              State Universities and Colleges nationwide.
-            </p>
-
-            {/* stat chips */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: '1.8rem' }}>
-              {STATS.map((s) => (
-                <div className="stat-chip" key={s.label} style={{
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.12)',
-                  borderRadius: 10,
-                  padding: '0.4rem 0.85rem',
-                  backdropFilter: 'blur(6px)',
-                  cursor: 'default',
-                }}>
-                  <div style={{ fontFamily: font, fontWeight: 800, fontSize: '0.95rem', color: '#fbbf24', lineHeight: 1.1 }}>{s.value}</div>
-                  <div style={{ fontFamily: font, fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)', marginTop: 2, whiteSpace: 'nowrap' }}>{s.label}</div>
-                </div>
-              ))}
+            <div className="login-field">
+              <label htmlFor="login-password">Password</label>
+              <div className="login-input-wrap">
+                <span className="login-input-icon">
+                  <i className="bi bi-lock" />
+                </span>
+                <input
+                  id="login-password"
+                  className="login-input"
+                  type={showPass ? 'text' : 'password'}
+                  name="password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  className="login-toggle"
+                  onClick={() => setShowPass((prev) => !prev)}
+                  tabIndex={-1}
+                  aria-label={showPass ? 'Hide password' : 'Show password'}
+                >
+                  <i className={`bi ${showPass ? 'bi-eye-slash' : 'bi-eye'}`} />
+                </button>
+              </div>
             </div>
 
-            {/* feature list */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {FEATURES.map((f) => (
-                <div key={f.title} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                  <div style={{
-                    width: 32, height: 32, borderRadius: 9, flexShrink: 0,
-                    background: 'rgba(251,191,36,0.1)',
-                    border: '1px solid rgba(251,191,36,0.22)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    <i className={`bi ${f.icon}`} style={{ fontSize: '0.85rem', color: '#fbbf24' }} />
-                  </div>
-                  <div>
-                    <div style={{ fontFamily: font, fontWeight: 700, fontSize: '0.8rem', color: '#fff', lineHeight: 1.3 }}>{f.title}</div>
-                    <div style={{ fontFamily: font, fontSize: '0.72rem', color: 'rgba(255,255,255,0.48)', lineHeight: 1.45, marginTop: 2 }}>{f.desc}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* bottom strip */}
-        <div style={{
-          position: 'relative', zIndex: 1,
-          padding: '0.8rem 2.5rem',
-          borderTop: '1px solid rgba(255,255,255,0.05)',
-          display: 'flex', alignItems: 'center', gap: 6,
-          flexShrink: 0,
-        }}>
-          <span style={{ fontFamily: font, fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)' }}>
-            &copy; {new Date().getFullYear()} Commission on Higher Education &mdash; Republic of the Philippines
-          </span>
-        </div>
-      </div>
-
-      {/* ══════════════════ RIGHT PANEL ══════════════════ */}
-      <div className="login-right" style={{
-        background: '#f8fafc',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '3rem 2rem',
-        overflow: 'auto',
-        position: 'relative',
-      }}>
-
-        {/* floating top-right badge */}
-        <div style={{
-          position: 'absolute', top: 24, right: 24,
-          display: 'flex', alignItems: 'center', gap: 8,
-          background: '#fff',
-          border: '1px solid #e2e8f0',
-          borderRadius: 20, padding: '6px 14px',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
-        }}>
-          <span className="pulse-dot" style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
-          <span style={{ fontFamily: font, fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>System Active</span>
-        </div>
-
-        {/* heading container */}
-        <div className="animate-fade-in-up" style={{ width: '100%', maxWidth: 420, marginBottom: '1.5rem', textAlign: 'center' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.75rem' }}>
-            <img src="/ched-logo.png" alt="CHED" style={{ height: 48 }} />
-          </div>
-          <h2 style={{
-            fontFamily: font,
-            fontWeight: 850,
-            fontSize: '1.75rem',
-            color: '#0f172a',
-            margin: 0,
-            lineHeight: 1.2,
-            letterSpacing: '-0.75px',
-          }}>
-            Welcome Back
-          </h2>
-          <p style={{
-            fontFamily: font,
-            color: '#64748b',
-            fontSize: '0.88rem',
-            marginTop: 6,
-            marginBottom: 0,
-            lineHeight: 1.5,
-          }}>
-            Sign in to access your administrative dashboard
-          </p>
-        </div>
-
-        {/* login card */}
-        <div className="login-card animate-fade-in-up" style={{
-          background: '#fff',
-          borderRadius: 20,
-          boxShadow: '0 4px 20px rgba(0,0,0,0.02), 0 12px 36px rgba(13,27,62,0.06)',
-          width: '100%',
-          maxWidth: 420,
-          overflow: 'hidden',
-          border: '1px solid #e2e8f0',
-        }}>
-
-          {/* top accent gradient bar */}
-          <div style={{
-            height: 5,
-            background: 'linear-gradient(90deg, #0c1c44 0%, #2563eb 50%, #fbbf24 100%)',
-          }} />
-
-          <div style={{ padding: '2rem 2rem 1.75rem' }}>
-
-            {error && (
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                background: '#fef2f2', border: '1px solid #fecaca',
-                borderRadius: 10, padding: '0.7rem 1rem',
-                marginBottom: '1.25rem',
-              }}>
-                <i className="bi bi-exclamation-circle-fill" style={{ color: '#ef4444', fontSize: '0.95rem', flexShrink: 0 }} />
-                <span style={{ fontFamily: font, fontSize: '0.82rem', color: '#dc2626', fontWeight: 500 }}>{error}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit}>
-
-              {/* Username field */}
-              <div style={{ marginBottom: '1.1rem' }}>
-                <label style={{
-                  fontFamily: font, fontSize: '0.75rem', fontWeight: 700,
-                  color: '#475569', display: 'block', marginBottom: 6,
-                  textTransform: 'uppercase', letterSpacing: '0.75px',
-                }}>
-                  Username
-                </label>
-                <div className="input-wrapper" style={{ position: 'relative' }}>
-                  <span style={{
-                    position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)',
-                    color: focusUser ? '#2563eb' : '#94a3b8',
-                    transition: 'color 0.15s', pointerEvents: 'none',
-                    display: 'flex', alignItems: 'center',
-                  }}>
-                    <i className="bi bi-person" style={{ fontSize: '1.1rem' }} />
-                  </span>
-                  <input
-                    type="text"
-                    name="username"
-                    style={{
-                      fontFamily: font,
-                      width: '100%',
-                      height: 48,
-                      paddingLeft: 42,
-                      paddingRight: 14,
-                      borderRadius: 12,
-                      border: `1.5px solid ${focusUser ? '#2563eb' : '#e2e8f0'}`,
-                      background: focusUser ? '#fff' : '#f8fafc',
-                      fontSize: '0.92rem',
-                      color: '#0f172a',
-                      outline: 'none',
-                      boxSizing: 'border-box',
-                    }}
-                    placeholder="Enter your username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    onFocus={() => setFocusUser(true)}
-                    onBlur={() => setFocusUser(false)}
-                    required
-                    autoComplete="username"
-                    autoFocus
-                  />
-                </div>
-              </div>
-
-              {/* Password field */}
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{
-                  fontFamily: font, fontSize: '0.75rem', fontWeight: 700,
-                  color: '#475569', display: 'block', marginBottom: 6,
-                  textTransform: 'uppercase', letterSpacing: '0.75px',
-                }}>
-                  Password
-                </label>
-                <div className="input-wrapper" style={{ position: 'relative' }}>
-                  <span style={{
-                    position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)',
-                    color: focusPass ? '#2563eb' : '#94a3b8',
-                    transition: 'color 0.15s', pointerEvents: 'none',
-                    display: 'flex', alignItems: 'center',
-                  }}>
-                    <i className="bi bi-lock" style={{ fontSize: '1.1rem' }} />
-                  </span>
-                  <input
-                    type={showPass ? 'text' : 'password'}
-                    name="password"
-                    style={{
-                      fontFamily: font,
-                      width: '100%',
-                      height: 48,
-                      paddingLeft: 42,
-                      paddingRight: 48,
-                      borderRadius: 12,
-                      border: `1.5px solid ${focusPass ? '#2563eb' : '#e2e8f0'}`,
-                      background: focusPass ? '#fff' : '#f8fafc',
-                      fontSize: '0.92rem',
-                      color: '#0f172a',
-                      outline: 'none',
-                      boxSizing: 'border-box',
-                    }}
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    onFocus={() => setFocusPass(true)}
-                    onBlur={() => setFocusPass(false)}
-                    required
-                    autoComplete="current-password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPass(!showPass)}
-                    tabIndex={-1}
-                    style={{
-                      position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)',
-                      background: 'none', border: 'none', color: '#94a3b8',
-                      cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center',
-                    }}
-                  >
-                    <i className={`bi ${showPass ? 'bi-eye-slash' : 'bi-eye'}`} style={{ fontSize: '1.15rem' }} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Submit button */}
-              <button
-                type="submit"
-                disabled={loading}
-                style={{
-                  fontFamily: font,
-                  width: '100%', height: 48,
-                  background: loading
-                    ? '#64748b'
-                    : 'linear-gradient(135deg, #0c1c44 0%, #1e3a8a 100%)',
-                  color: '#fff',
-                  border: 'none', borderRadius: 12,
-                  fontWeight: 700, fontSize: '0.95rem',
-                  letterSpacing: '0.2px',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  boxShadow: loading ? 'none' : '0 4px 18px rgba(12,28,68,0.25)',
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={(e) => { if (!loading) { e.currentTarget.style.opacity = '0.95'; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
-                onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'translateY(0)'; }}
-              >
-                {loading
-                  ? <><span className="spinner-border spinner-border-sm" style={{ width: 16, height: 16 }} /> Signing in...</>
-                  : <>Sign In &nbsp;<i className="bi bi-arrow-right-short" style={{ fontSize: '1.25rem' }} /></>
-                }
-              </button>
-            </form>
-
-            {/* ── OR divider ── */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '1.25rem 0' }}>
-              <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
-              <span style={{ fontFamily: font, fontSize: '0.72rem', color: '#94a3b8', fontWeight: 700, whiteSpace: 'nowrap', letterSpacing: '0.5px' }}>OR</span>
-              <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
-            </div>
-
-            {/* Continue with Google */}
-            <button
-              type="button"
-              onClick={handleGoogleSignIn}
-              disabled={googleLoading}
-              style={{
-                fontFamily: font,
-                width: '100%', height: 46,
-                background: googleLoading ? '#f8fafc' : '#fff',
-                color: '#334155',
-                border: '1.5px solid #e2e8f0',
-                borderRadius: 12,
-                fontWeight: 600, fontSize: '0.9rem',
-                cursor: googleLoading ? 'not-allowed' : 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-                boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-                transition: 'all 0.2s ease',
-              }}
-              onMouseEnter={(e) => { if (!googleLoading) { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.boxShadow = '0 3px 10px rgba(0,0,0,0.06)'; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'; e.currentTarget.style.transform = 'translateY(0)'; }}
-            >
-              {googleLoading ? (
-                <><span className="spinner-border spinner-border-sm" style={{ width: 16, height: 16 }} /> Signing in with Google...</>
+            <button type="submit" className="login-submit" disabled={loading}>
+              {loading ? (
+                <><span className="spinner-border spinner-border-sm" style={{ width: 16, height: 16, marginRight: 8 }} /> Signing in...</>
               ) : (
-                <>
-                  {/* Google G logo SVG */}
-                  <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
-                    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-                    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-                    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-                    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-                    <path fill="none" d="M0 0h48v48H0z"/>
-                  </svg>
-                  Continue with Google
-                </>
+                <>Sign In <i className="bi bi-arrow-right-short" style={{ fontSize: '1.2rem', verticalAlign: 'middle' }} /></>
               )}
             </button>
+          </form>
 
-          </div>{/* end card padding */}
+          <div className="login-divider"><span>OR</span></div>
 
-          {/* security footer */}
-          <div style={{
-            background: '#fafaf9',
-            borderTop: '1px solid #f5f5f4',
-            padding: '0.8rem 1.75rem',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            gap: 10,
-          }}>
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              fontFamily: font, fontSize: '0.75rem', color: '#78716c',
-            }}>
-              <LockIcon /> Secured by
-              <strong style={{ color: '#1c1917' }}>CHED e-Agenda Auth</strong>
-            </span>
-            <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#d6d3d1', flexShrink: 0 }} />
-            <span style={{ fontFamily: font, fontSize: '0.72rem', color: '#b45309', fontWeight: 650 }}>
-              Philippines
-            </span>
+          <button type="button" className="login-google" onClick={handleGoogleSignIn} disabled={googleLoading}>
+            {googleLoading ? (
+              <><span className="spinner-border spinner-border-sm" style={{ width: 16, height: 16 }} /> Signing in with Google...</>
+            ) : (
+              <>
+                <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+                  <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                  <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                  <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                  <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                  <path fill="none" d="M0 0h48v48H0z"/>
+                </svg>
+                Continue with Google
+              </>
+            )}
+          </button>
+
+          <div className="login-footer">
+            <LockIcon />
+            <span>Secured by <strong>USM BoardHub Auth</strong></span>
           </div>
         </div>
-
-        <p style={{
-          fontFamily: font, color: '#94a3b8', fontSize: '0.75rem',
-          marginTop: '1.5rem', textAlign: 'center', lineHeight: 1.5,
-        }}>
-          Don&apos;t have an account? Contact your system administrator.
-        </p>
-
-      </div>
+      </section>
     </div>
   );
 }

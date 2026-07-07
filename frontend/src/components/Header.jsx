@@ -15,14 +15,14 @@ function Header({ user, onLogout }) {
       <div className="container-fluid px-4 d-flex align-items-center justify-content-between">
         <div className="d-flex align-items-center gap-3">
           <Link to="/" className="header-brand d-flex align-items-center text-decoration-none">
-            <img src="/ched-logo.png" alt="CHED" className="header-logo" />
+            <img src="/usm-logo.png" alt="University of Southern Mindanao" className="header-logo" />
           </Link>
           <nav className="d-none d-md-flex align-items-center gap-1">
             {!user && <Link className={isActive('/')} to="/">HOME</Link>}
             {user && user.role === 'admin' && (
               <>
                 <Link className={isActive('/admin')} to="/admin">DASHBOARD</Link>
-                {/* e-AGENDA dropdown */}
+                {/* BoardHub dropdown */}
                 <div className={`dropdown${agendaOpen ? ' show' : ''}`}>
                   <button
                     className={isActiveDropdown(agendaPaths)}
@@ -30,7 +30,7 @@ function Header({ user, onLogout }) {
                     onBlur={() => setTimeout(() => setAgendaOpen(false), 150)}
                     type="button"
                   >
-                    e-AGENDA
+                    BOARDHUB
                   </button>
                   <ul className={`dropdown-menu${agendaOpen ? ' show' : ''}`}>
                     <li>
@@ -92,13 +92,13 @@ function Header({ user, onLogout }) {
           {user && user.role === 'admin' && (
             <>
               <Link className="mobile-nav-link" to="/admin">DASHBOARD</Link>
-              {/* e-AGENDA collapsible section */}
+              {/* BoardHub collapsible section */}
               <button
                 className="mobile-nav-link mobile-nav-collapse-btn w-100 text-start border-0 bg-transparent d-flex justify-content-between align-items-center"
                 onClick={() => setMobileAgendaOpen((o) => !o)}
                 type="button"
               >
-                <span>e-AGENDA</span>
+                <span>BOARDHUB</span>
                 <i className={`bi bi-chevron-${mobileAgendaOpen ? 'up' : 'down'} ms-1`}></i>
               </button>
               {mobileAgendaOpen && (

@@ -423,11 +423,11 @@ function RegularBoardMeeting({ user }) {
     <div>
       {/* Hero banner */}
       <div className="agenda-hero mb-4">
-        <h4 className="agenda-hero-title">E-Agenda System</h4>
+        <h4 className="agenda-hero-title">USM BoardHub</h4>
         <p className="agenda-hero-desc">
-          Efficiently manage and upload the SUC Order of Business e-Management through this platform.
+          Efficiently manage and upload board proposal files through this platform.
           It provides authorized users with a secure, centralized system for organizing, tracking, and
-          accessing official SUC meeting agenda items, ensuring accuracy, transparency, and
+          accessing official board agenda records, ensuring accuracy, transparency, and
           accountability under the leadership of {getLeaderLine(user)}.
         </p>
       </div>

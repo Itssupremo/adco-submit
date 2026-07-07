@@ -1,147 +1,98 @@
 import { Link, useLocation } from 'react-router-dom';
 
-// ── Navigation definitions per role ─────────────────────────────────────────
 const superAdminNav = [
   {
     section: 'OVERVIEW',
     items: [{ label: 'Dashboard', icon: 'bi-house-door', path: '/admin' }],
   },
   {
-    section: 'e-AGENDA',
+    section: 'SUBMISSIONS',
     items: [
-      { label: 'Regular Board Meeting', icon: 'bi-calendar-event',  path: '/admin/regular-board' },
-      { label: 'Minutes of the Meeting', icon: 'bi-file-text',       path: '/admin/minutes' },
-      { label: 'Special Board Meeting', icon: 'bi-calendar-check',  path: '/admin/special-board' },
+      { label: 'Submissions', icon: 'bi-file-earmark-pdf', path: '/admin/submissions' },
+      { label: 'Reports', icon: 'bi-bar-chart-line', path: '/admin/reports' },
+      { label: 'Notifications', icon: 'bi-bell', path: '/notifications' },
     ],
-  },
-  {
-    section: 'ANALYTICS',
-    items: [{ label: 'Analytics', icon: 'bi-bar-chart-line', path: '/admin/analytics' }],
   },
   {
     section: 'MANAGEMENT',
     items: [
       { label: 'User Management', icon: 'bi-people', path: '/admin/users' },
-      { label: 'Users Log', icon: 'bi-journal-text', path: '/admin/logs' }
+      { label: 'Councils', icon: 'bi-buildings', path: '/admin/councils' },
+      { label: 'Activity Logs', icon: 'bi-journal-text', path: '/admin/logs' },
+      { label: 'Settings', icon: 'bi-gear', path: '/admin/settings' },
     ],
   },
 ];
 
-const adminNav = [
+const boardNav = [
   {
     section: 'OVERVIEW',
-    items: [{ label: 'Dashboard', icon: 'bi-house-door', path: '/admin' }],
+    items: [{ label: 'Dashboard', icon: 'bi-house-door', path: '/board' }],
   },
   {
-    section: 'e-AGENDA',
+    section: 'SUBMISSIONS',
     items: [
-      { label: 'Regular Board Meeting', icon: 'bi-calendar-event',  path: '/admin/regular-board' },
-      { label: 'Minutes of the Meeting', icon: 'bi-file-text',       path: '/admin/minutes' },
-      { label: 'Special Board Meeting', icon: 'bi-calendar-check',  path: '/admin/special-board' },
+      { label: 'Submissions', icon: 'bi-file-earmark-pdf', path: '/board/submissions' },
+      { label: 'Reports', icon: 'bi-bar-chart-line', path: '/board/reports' },
+      { label: 'Notifications', icon: 'bi-bell', path: '/notifications' },
     ],
-  },
-  {
-    section: 'ANALYTICS',
-    items: [{ label: 'Analytics', icon: 'bi-bar-chart-line', path: '/admin/analytics' }],
   },
   {
     section: 'MANAGEMENT',
     items: [
-      { label: 'User Management', icon: 'bi-people', path: '/admin/users' },
-      { label: 'Users Log', icon: 'bi-journal-text', path: '/admin/logs' }
+      { label: 'User Management', icon: 'bi-people', path: '/board/users' },
+      { label: 'Councils', icon: 'bi-buildings', path: '/board/councils' },
+      { label: 'Activity Logs', icon: 'bi-journal-text', path: '/board/logs' },
     ],
   },
 ];
 
-const userNav = [
+const councilNav = [
   {
     section: 'OVERVIEW',
-    items: [{ label: 'Dashboard', icon: 'bi-house-door', path: '/dashboard' }],
+    items: [{ label: 'Dashboard', icon: 'bi-house-door', path: '/council' }],
   },
   {
-    section: 'e-AGENDA',
+    section: 'SUBMISSION',
     items: [
-      { label: 'Regular Board Meeting', icon: 'bi-calendar-event',  path: '/admin/regular-board' },
-      { label: 'Minutes of the Meeting', icon: 'bi-file-text',       path: '/admin/minutes' },
-      { label: 'Special Board Meeting', icon: 'bi-calendar-check',  path: '/admin/special-board' },
+      { label: 'Submit Proposal', icon: 'bi-upload', path: '/council/submit-proposal' },
+      { label: 'My Submission', icon: 'bi-file-earmark-text', path: '/council/submission' },
+      { label: 'Notifications', icon: 'bi-bell', path: '/notifications' },
     ],
-  },
-  {
-    section: 'ANALYTICS',
-    items: [{ label: 'My Analytics', icon: 'bi-bar-chart-line', path: '/dashboard/analytics' }],
-  },
-  {
-    section: 'MANAGEMENT',
-    items: [{ label: 'Board Members', icon: 'bi-people', path: '/dashboard/users' }],
   },
 ];
 
-const boardMemberNav = [
-  {
-    section: 'OVERVIEW',
-    items: [{ label: 'Dashboard', icon: 'bi-house-door', path: '/dashboard' }],
-  },
-  {
-    section: 'e-AGENDA',
-    items: [
-      { label: 'Regular Board Meeting', icon: 'bi-calendar-event',  path: '/admin/regular-board' },
-      { label: 'Minutes of the Meeting', icon: 'bi-file-text',       path: '/admin/minutes' },
-      { label: 'Special Board Meeting', icon: 'bi-calendar-check',  path: '/admin/special-board' },
-    ],
-  },
-  {
-    section: 'ANALYTICS',
-    items: [{ label: 'My Analytics', icon: 'bi-bar-chart-line', path: '/dashboard/analytics' }],
-  },
-];
-
-const NAV_BY_ROLE = { superadmin: superAdminNav, admin: adminNav, user: userNav, board_member: boardMemberNav };
+const NAV_BY_ROLE = { superadmin: superAdminNav, board: boardNav, council: councilNav };
 
 const ROLE_BADGE = {
-  superadmin:   { label: 'Super Admin', color: '#e74c3c' },
-  admin:        { label: 'Commissioner', color: '#2980b9' },
-  user:         { label: 'SUC',          color: '#27ae60' },
-  board_member: { label: 'Board Member', color: '#8e44ad' },
+  superadmin: { label: 'Super Admin', color: '#e74c3c' },
+  board: { label: 'USM Board', color: '#2980b9' },
+  council: { label: 'Administrative Council', color: '#27ae60' },
 };
 
-function getRoleBadge(user) {
-  if (user?.role === 'admin' && user?.occCode === 'OCSCA') {
-    return { label: 'Chairperson', color: '#8e44ad' };
-  }
-  if (user?.role === 'board_member') {
-    return {
-      label: user.sucAbbreviation ? `${user.sucAbbreviation} — Board Member` : 'Board Member',
-      color: '#8e44ad'
-    };
-  }
-  return ROLE_BADGE[user?.role] || ROLE_BADGE.user;
-}
-
 function Sidebar({ user, onLogout, open, onToggle }) {
-  const location   = useLocation();
-  const navSections = NAV_BY_ROLE[user?.role] || userNav;
-  const badge       = getRoleBadge(user);
+  const location = useLocation();
+  const navSections = NAV_BY_ROLE[user?.role] || councilNav;
+  const badge = ROLE_BADGE[user?.role] || ROLE_BADGE.council;
 
   return (
     <>
       {open && <div className="sidebar-overlay d-lg-none" onClick={onToggle} />}
 
       <aside className={`sidebar${open ? ' sidebar-open' : ''}`}>
-        {/* Brand / Header */}
         <div className="sidebar-header">
           <button className="sidebar-toggle" onClick={onToggle} type="button" title="Toggle menu">
             <i className="bi bi-list" />
           </button>
           <div className="sidebar-brand">
-            <img src="/ched-logo.png" alt="CHED" className="sidebar-logo" />
+            <img src="/usm-logo.png" alt="University of Southern Mindanao" className="sidebar-logo" />
             <div className="sidebar-brand-text">
-              <span className="sidebar-brand-name">e-Agenda</span>
-              <span className="sidebar-brand-sub">CHED System</span>
+              <span className="sidebar-brand-name">USM BoardHub</span>
+              <span className="sidebar-brand-sub">Board Proposal System</span>
             </div>
           </div>
         </div>
 
-        {/* Navigation */}
         <nav className="sidebar-nav">
           {navSections.map((section) => (
             <div key={section.section} className="sidebar-section">
@@ -161,7 +112,6 @@ function Sidebar({ user, onLogout, open, onToggle }) {
           ))}
         </nav>
 
-        {/* Footer: role badge + user info + logout */}
         <div className="sidebar-footer">
           <Link
             to="/my-account"
@@ -176,9 +126,15 @@ function Sidebar({ user, onLogout, open, onToggle }) {
               </div>
               <span
                 style={{
-                  fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.6px',
-                  background: badge.color, color: '#fff',
-                  padding: '1px 7px', borderRadius: 10, display: 'inline-block', marginTop: 2,
+                  fontSize: '0.65rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.6px',
+                  background: badge.color,
+                  color: '#fff',
+                  padding: '1px 7px',
+                  borderRadius: 10,
+                  display: 'inline-block',
+                  marginTop: 2,
                 }}
               >
                 {badge.label}

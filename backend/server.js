@@ -3,14 +3,16 @@ require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
 const mongoose = require('mongoose');
 const authRoutes = require('./routes/authRoutes');
-const sucRoutes = require('./routes/sucRoutes');
 const userRoutes = require('./routes/userRoutes');
-const agendaRoutes              = require('./routes/agendaRoutes');
-const documentRoutes            = require('./routes/documentRoutes');
-const dateBoardMeetingRoutes    = require('./routes/dateBoardMeetingRoutes');
 const activityLogRoutes         = require('./routes/activityLogRoutes');
+const councilRoutes = require('./routes/councilRoutes');
+const submissionRoutes = require('./routes/submissionRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
+const settingsRoutes = require('./routes/settingsRoutes');
+const reportRoutes = require('./routes/reportRoutes');
 const cors = require('cors');
 const { seedData } = require('./seed');
+const { isLocalAuthEnabled } = require('./utils/localAuth');
 
 const app = express();
 
@@ -63,11 +65,12 @@ app.use(express.json());
 // Mount both with and without /api prefix to support platforms that trim path prefixes.
 const mountRoutes = (prefix = '') => {
   app.use(`${prefix}/auth`, authRoutes);
-  app.use(`${prefix}/sucs`, sucRoutes);
   app.use(`${prefix}/users`, userRoutes);
-  app.use(`${prefix}/agendas`, agendaRoutes);
-  app.use(`${prefix}/documents`, documentRoutes);
-  app.use(`${prefix}/dateboardmeetings`, dateBoardMeetingRoutes);
+  app.use(`${prefix}/councils`, councilRoutes);
+  app.use(`${prefix}/submissions`, submissionRoutes);
+  app.use(`${prefix}/notifications`, notificationRoutes);
+  app.use(`${prefix}/settings`, settingsRoutes);
+  app.use(`${prefix}/reports`, reportRoutes);
   app.use(`${prefix}/logs`, activityLogRoutes);
 };
 
@@ -86,6 +89,10 @@ app.get('/api/health', (req, res) => {
 // Connect to MongoDB
 let isConnected = false;
 const connectDB = async () => {
+  if (isLocalAuthEnabled()) {
+    console.log('LOCAL_AUTH_ONLY enabled: skipping MongoDB connection');
+    return;
+  }
   if (isConnected) return;
   await mongoose.connect(process.env.MONGO_URI);
   isConnected = true;
@@ -99,23 +106,6 @@ const connectDB = async () => {
       console.log('No users found in database. Running auto-seeding...');
       await seedData();
       console.log('Auto-seeding completed successfully.');
-    }
-
-    // Migration: populate occCode for existing board_members
-    const Suc = require('./models/Suc');
-    const boardMembersWithNoOcc = await User.find({
-      role: 'board_member',
-      $or: [{ occCode: '' }, { occCode: { $exists: false } }]
-    });
-    for (const bm of boardMembersWithNoOcc) {
-      if (bm.sucAbbreviation) {
-        const sucDoc = await Suc.findOne({ abbreviation: bm.sucAbbreviation });
-        if (sucDoc) {
-          bm.occCode = sucDoc.occCode;
-          await bm.save();
-          console.log(`Migration: Updated board member "${bm.username}" occCode to "${sucDoc.occCode}"`);
-        }
-      }
     }
   } catch (err) {
     console.error('Error during database initialization/migration:', err.message);

@@ -1,21 +1,8 @@
 import { useState, useEffect } from 'react';
 import { updateSelf } from '../services/api';
 
-const ROLE_LABEL = { superadmin: 'Super Admin', admin: 'Commissioner', user: 'SUC User' };
-const ROLE_BADGE  = { superadmin: 'bg-danger', admin: 'bg-primary', user: 'bg-success' };
-
-function getRoleLabel(user) {
-  if (user?.role === 'admin' && user?.occCode === 'OCSCA') return 'Chairperson';
-  return ROLE_LABEL[user?.role] || user?.role;
-}
-
-const OCC_OFFICIALS = {
-  OCSCA: 'Chairperson Shirley C. Agrupis',
-  OCDRA: 'Commissioner Desiderio R. Apag III',
-  OCRPA: 'Commissioner Ricmar P. Aquino',
-  OCMQM: 'Commissioner Myrna Q. Mallari',
-  OCMAO: 'Commissioner Michelle Aguilar-Ong',
-};
+const ROLE_LABEL = { superadmin: 'Super Admin', board: 'USM Board', council: 'Administrative Council' };
+const ROLE_BADGE  = { superadmin: 'bg-danger', board: 'bg-primary', council: 'bg-success' };
 
 function MyAccount({ user, onUserUpdate }) {
   const [editing, setEditing]           = useState(false);
@@ -69,10 +56,7 @@ function MyAccount({ user, onUserUpdate }) {
   };
 
   const roleBadge  = ROLE_BADGE[user?.role]  || 'bg-secondary';
-  const roleLabel  = getRoleLabel(user);
-  const displayName = user?.role === 'admin' && user?.occCode
-    ? (OCC_OFFICIALS[user.occCode] || user.occCode)
-    : user?.fullname;
+  const roleLabel  = ROLE_LABEL[user?.role] || user?.role;
 
   return (
     <div className="row justify-content-center">
@@ -118,14 +102,8 @@ function MyAccount({ user, onUserUpdate }) {
                 </div>
                 <div>
                   <h4 className="mb-1 fw-bold text-dark">{user?.fullname}</h4>
-                  {user?.role === 'admin' && user?.occCode && (
-                    <div className="text-muted mb-2 fs-6">{displayName}</div>
-                  )}
                   <div className="d-flex align-items-center mt-2">
                     <span className={`badge ${roleBadge} px-3 py-2 rounded-pill fs-6`}>{roleLabel}</span>
-                    {user?.sucAbbreviation && (
-                      <span className="badge bg-secondary px-3 py-2 rounded-pill fs-6 ms-2">{user.sucAbbreviation}</span>
-                    )}
                   </div>
                 </div>
               </div>
@@ -153,10 +131,19 @@ function MyAccount({ user, onUserUpdate }) {
                 </div>
 
                 <div className="col-sm-3 text-muted fw-semibold d-flex align-items-center">
-                  <i className="bi bi-building me-3 fs-5"></i>Office
+                  <i className="bi bi-building me-3 fs-5"></i>College/Unit
                 </div>
                 <div className="col-sm-9 d-flex align-items-center text-dark">
-                  {user?.role === 'admin' ? user?.occCode : user?.sucAbbreviation || '—'}
+                  {user?.role === 'council'
+                    ? (user?.councilName || <span className="text-muted fst-italic">Not assigned</span>)
+                    : <span className="text-muted fst-italic">Not applicable</span>}
+                </div>
+
+                <div className="col-sm-3 text-muted fw-semibold d-flex align-items-center">
+                  <i className="bi bi-diagram-3 me-3 fs-5"></i>Scope
+                </div>
+                <div className="col-sm-9 d-flex align-items-center text-dark">
+                  {user?.role === 'superadmin' ? 'System-wide' : user?.role === 'board' ? 'All submissions' : 'Assigned council account'}
                 </div>
               </div>
             </div>

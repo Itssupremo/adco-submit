@@ -4,6 +4,23 @@ import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
+function normalizePdfError(error) {
+  const message = String(error?.message || '').trim();
+  const normalized = message.toLowerCase();
+
+  if (
+    normalized.includes('offset is out of bounds') ||
+    normalized.includes('invalid pdf') ||
+    normalized.includes('malformed') ||
+    normalized.includes('unexpected server response') ||
+    normalized.includes('missing pdf')
+  ) {
+    return 'Unable to preview this file in the built-in viewer. Download the file to open it locally.';
+  }
+
+  return message || 'Failed to load PDF.';
+}
+
 function PdfPage({ pdf, pageNumber, scale }) {
   const canvasRef = useRef(null);
   const [pageSize, setPageSize] = useState({ width: 0, height: 0 });
@@ -128,7 +145,7 @@ export default function PdfViewer({ url, title, onClose }) {
 
     loadPdf().catch((err) => {
       if (!cancelled) {
-        setError(err?.message || 'Failed to load PDF.');
+        setError(normalizePdfError(err));
         setLoading(false);
       }
     });

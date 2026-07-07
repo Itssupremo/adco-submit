@@ -1,3 +1,6 @@
+const fs = require('fs/promises');
+const path = require('path');
+const crypto = require('crypto');
 const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 
 const isS3Configured = !!(
@@ -23,22 +26,48 @@ if (isS3Configured) {
   s3Client = new S3Client(config);
 }
 
+const localUploadRoot = path.join(__dirname, '..', 'uploads');
+
+const sanitizeBaseName = (filename) => {
+  const extIndex = filename.lastIndexOf('.');
+  const baseName = extIndex >= 0 ? filename.substring(0, extIndex) : filename;
+  return baseName.replace(/[^a-zA-Z0-9-_]/g, '_') || 'file';
+};
+
+const getFileExtension = (filename) => {
+  const extIndex = filename.lastIndexOf('.');
+  return extIndex >= 0 ? filename.substring(extIndex) : '';
+};
+
+const buildStorageKey = (filename) => {
+  const extension = getFileExtension(filename);
+  const cleanBaseName = sanitizeBaseName(filename);
+  return `uploads/${Date.now()}-${crypto.randomUUID()}-${cleanBaseName}${extension}`;
+};
+
+const getLocalFilePath = (key) => path.join(__dirname, '..', key.replace(/\//g, path.sep));
+
+const ensureLocalUploadDir = async (key) => {
+  const targetPath = getLocalFilePath(key);
+  await fs.mkdir(path.dirname(targetPath), { recursive: true });
+  return targetPath;
+};
+
 /**
  * Uploads a file buffer to S3/Spaces
  * @param {string} filename Original filename
  * @param {Buffer} buffer File binary data
  * @param {string} contentType MIME type
- * @returns {Promise<string|null>} S3 Key if successful, or null if S3 is not configured
+ * @returns {Promise<string>} Storage key for S3 or local uploads
  */
 const uploadToS3 = async (filename, buffer, contentType) => {
-  if (!isS3Configured) return null;
-  
-  // Create a unique key under uploads/ folder
-  const fileExtension = filename.substring(filename.lastIndexOf('.'));
-  const cleanBaseName = filename
-    .substring(0, filename.lastIndexOf('.'))
-    .replace(/[^a-zA-Z0-9-_]/g, '_');
-  const uniqueKey = `uploads/${Date.now()}-${Math.random().toString(36).substring(2, 9)}-${cleanBaseName}${fileExtension}`;
+  const uniqueKey = buildStorageKey(filename);
+
+  if (!isS3Configured) {
+    const targetPath = await ensureLocalUploadDir(uniqueKey);
+    await fs.writeFile(targetPath, buffer);
+    return uniqueKey;
+  }
 
   const params = {
     Bucket: process.env.S3_BUCKET,
@@ -57,7 +86,15 @@ const uploadToS3 = async (filename, buffer, contentType) => {
  * @returns {Promise<Buffer|null>} File buffer
  */
 const getFromS3 = async (key) => {
-  if (!isS3Configured) return null;
+  if (!key) return null;
+
+  if (!isS3Configured) {
+    try {
+      return await fs.readFile(getLocalFilePath(key));
+    } catch {
+      return null;
+    }
+  }
 
   const params = {
     Bucket: process.env.S3_BUCKET,
@@ -84,7 +121,16 @@ const getFromS3 = async (key) => {
  * @returns {Promise<void>}
  */
 const deleteFromS3 = async (key) => {
-  if (!isS3Configured || !key) return;
+  if (!key) return;
+
+  if (!isS3Configured) {
+    try {
+      await fs.unlink(getLocalFilePath(key));
+    } catch {
+      return;
+    }
+    return;
+  }
 
   const params = {
     Bucket: process.env.S3_BUCKET,
@@ -103,4 +149,5 @@ module.exports = {
   uploadToS3,
   getFromS3,
   deleteFromS3,
+  localUploadRoot,
 };

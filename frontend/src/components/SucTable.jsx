@@ -36,7 +36,7 @@ function SucTable({ sucs, onEdit, onDelete, onTransfer, showActions = false, isA
     if (!table) return;
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
-      <html><head><title>e-Agenda System</title>
+      <html><head><title>USM BoardHub</title>
       <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
       <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet"/>
       <style>body{font-family:'Montserrat',sans-serif;padding:20px}
@@ -53,7 +53,7 @@ function SucTable({ sucs, onEdit, onDelete, onTransfer, showActions = false, isA
       <div class="print-header">
         <img src="/ched-bp-logo.png" alt="CHED"/>
         <h4>Commission on Higher Education</h4>
-        <p>e-Agenda System</p>
+        <p>USM BoardHub</p>
       </div>
       <table class="table table-bordered table-sm">
         <thead><tr><th>#</th>${printCols.map((k) => `<th>${ALL_COLUMNS.find((c) => c.key === k)?.label || k}</th>`).join('')}</tr></thead>
