@@ -23,7 +23,7 @@ const SINGLE_FIELDS = [
 const MULTI_FIELDS = [
   ['supportingDocuments', 'Supporting Document'],
   ['vpafFanCertificationPdfs', 'VPAF / FMS Certification'],
-  ['vpaaAdministrativeCouncilPdfs', 'VPAA / Administrative Council'],
+  ['vpaaAdministrativeCouncilPdfs', 'VPAA / Academic Council'],
   ['vprgesProductionCouncilPdfs', 'VPRGES / Production Council'],
   ['vprdeUrdecPdfs', 'VPRDE / URDEC'],
   ['officeOfPresidentPdfs', 'Office of the President'],

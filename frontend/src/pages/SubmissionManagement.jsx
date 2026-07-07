@@ -74,7 +74,7 @@ const FILE_LABELS = {
   legalEndorsementPdf: 'Legal Endorsement',
   supportingDocuments: 'Supporting Document',
   vpafFanCertificationPdfs: 'VPAF / FMS Certification',
-  vpaaAdministrativeCouncilPdfs: 'VPAA / Administrative Council',
+  vpaaAdministrativeCouncilPdfs: 'VPAA / Academic Council',
   vprgesProductionCouncilPdfs: 'VPRGES / Production Council',
   vprdeUrdecPdfs: 'VPRDE / URDEC',
   officeOfPresidentPdfs: 'Office of the President',
@@ -803,7 +803,7 @@ function SubmissionManagement({ user, councilView = 'history' }) {
                           ) : null}
                           {proposalRule.visibleMulti.includes('vpaaAdministrativeCouncilPdfs') ? (
                             <div className="col-md-6">
-                              <FileInput label="VPAA / Administrative Council" accept="application/pdf" required={!editingSubmission && proposalRule.requiredMulti.includes('vpaaAdministrativeCouncilPdfs')} multiple currentFileNames={getArrayFiles(editingSubmission?.files || {}, 'vpaaAdministrativeCouncilPdfs').map((file) => file.filename)} selectedFileNames={getSelectedFileNames('vpaaAdministrativeCouncilPdfs')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(files) => setField('vpaaAdministrativeCouncilPdfs', files)} />
+                              <FileInput label="VPAA / Academic Council" accept="application/pdf" required={!editingSubmission && proposalRule.requiredMulti.includes('vpaaAdministrativeCouncilPdfs')} multiple currentFileNames={getArrayFiles(editingSubmission?.files || {}, 'vpaaAdministrativeCouncilPdfs').map((file) => file.filename)} selectedFileNames={getSelectedFileNames('vpaaAdministrativeCouncilPdfs')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(files) => setField('vpaaAdministrativeCouncilPdfs', files)} />
                             </div>
                           ) : null}
                           {proposalRule.visibleMulti.includes('vprgesProductionCouncilPdfs') ? (
