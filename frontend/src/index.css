@@ -1664,3 +1664,41 @@ body,
   transition: background 0.35s ease, color 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
 }
 
+/* ── Submission Overview Grid ─────────────────────────────────── */
+.submission-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
+  padding: 1.25rem;
+  background: var(--navy-muted, rgba(20, 83, 45, 0.05));
+  border-radius: var(--r-md, 10px);
+  border: 1px solid var(--border, #dbe7db);
+  margin-bottom: 1.25rem;
+}
+
+.overview-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.overview-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: var(--text-secondary, #475569);
+  font-weight: 700;
+}
+
+.overview-value {
+  font-size: 0.95rem;
+  color: var(--text-primary, #163020);
+  font-weight: 500;
+}
+
+[data-theme="dark"] .submission-overview-grid {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+

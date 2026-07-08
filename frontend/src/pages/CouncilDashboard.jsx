@@ -41,6 +41,11 @@ const isPdfFile = (file) => {
 
 const getProposalTypeLabel = (submission) => submission?.proposalType || 'Not specified';
 
+const isOverdue = (deadline) => {
+  if (!deadline) return false;
+  return new Date(deadline).getTime() < Date.now();
+};
+
 const getSubmissionVersions = (submission) => {
   const previous = Array.isArray(submission?.packetHistory) ? submission.packetHistory.map((item) => item.version) : [];
   const currentVersion = submission?.packetVersion || 1;
@@ -168,31 +173,86 @@ function CouncilDashboard() {
               {!current ? (
                 <div className="text-muted">No active submission yet. Use the Submit Proposal page to upload your proposal packet.</div>
               ) : (
-                <div className="row g-3">
-                  <div className="col-md-6"><strong>College/Unit:</strong><div>{current.collegeUnit || current.councilName || '—'}</div></div>
-                  <div className="col-md-6"><strong>Proposal Type:</strong><div>{getProposalTypeLabel(current)}</div></div>
-                  <div className="col-md-8"><strong>Title:</strong><div>{current.documentTitle || '—'}</div></div>
-                  <div className="col-md-4"><strong>Status:</strong><div>{current.status || '—'}</div></div>
-                  <div className="col-12"><strong>Upload Versions:</strong>{renderVersionBadges(current)}</div>
-                  <div className="col-12"><strong>Remarks:</strong><div>{current.remarks || 'No remarks'}</div></div>
-                  <div className="col-12"><strong>Files:</strong>{renderDocumentButtons(current)}</div>
-                  <div className="col-12">
-                    <strong>Admin Review:</strong>
-                    {hasReviewFeedback(current) ? (
-                      <div className="mt-2 d-grid gap-2">
-                        {getSubmissionReviewItems(current).map((item) => (
-                          <div key={`${item.key}-${item.index ?? 'single'}`} className="border rounded-3 px-3 py-2 d-flex justify-content-between align-items-start gap-3">
-                            <div>
-                              <div className="fw-semibold">{item.label}</div>
-                              <div className="small text-muted">{item.remarks || 'No document remarks.'}</div>
-                            </div>
-                            <span className={`badge ${item.checked ? 'text-bg-success' : 'text-bg-secondary'}`}>{item.checked ? 'Checked' : 'Pending Review'}</span>
-                          </div>
-                        ))}
+                <div>
+                  <div className="submission-overview-grid">
+                    <div className="overview-item">
+                      <span className="overview-label">College / Unit</span>
+                      <span className="overview-value">{current.collegeUnit || current.councilName || '—'}</span>
+                    </div>
+                    <div className="overview-item">
+                      <span className="overview-label">Proposal Type</span>
+                      <span className="overview-value">{getProposalTypeLabel(current)}</span>
+                    </div>
+                    <div className="overview-item">
+                      <span className="overview-label">Proposal Title</span>
+                      <span className="overview-value fw-semibold">{current.documentTitle || '—'}</span>
+                    </div>
+                    <div className="overview-item">
+                      <span className="overview-label">Status</span>
+                      <div className="overview-value">
+                        <span className={`badge ${
+                          current.status === 'Approved' ? 'bg-success' :
+                          current.status === 'Returned' 
+                            ? (isOverdue(current.resubmissionDeadline) ? 'bg-danger text-white' : 'bg-warning text-dark') :
+                          current.status === 'Archived' ? 'bg-secondary' : 'bg-info text-dark'
+                        }`}>
+                          {current.status === 'Returned' && isOverdue(current.resubmissionDeadline) ? 'Failed to Submit' : current.status}
+                        </span>
                       </div>
-                    ) : (
-                      <div className="text-muted mt-2">No admin review feedback yet.</div>
-                    )}
+                    </div>
+                  </div>
+
+                  <div className="d-flex flex-column gap-3 mt-3">
+                    {current.status === 'Returned' && current.resubmissionDeadline ? (
+                      <div className={`alert ${isOverdue(current.resubmissionDeadline) ? 'alert-danger' : 'alert-warning'} py-2.5 px-3 mb-0 d-flex align-items-center`}>
+                        <i className={`bi ${isOverdue(current.resubmissionDeadline) ? 'bi-exclamation-triangle-fill' : 'bi-clock-fill'} me-2 fs-5`} />
+                        <div>
+                          {isOverdue(current.resubmissionDeadline) ? (
+                            <span><strong>Resubmission deadline has passed.</strong> This submission is now locked and cannot be revised.</span>
+                          ) : (
+                            <span>
+                              <strong>Resubmission Deadline:</strong> {new Date(current.resubmissionDeadline).toLocaleString()}
+                              <span className="text-muted ms-2">({Math.ceil((new Date(current.resubmissionDeadline) - new Date()) / (1000 * 60 * 60 * 24))} days remaining)</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    <div className="row g-3">
+                      <div className="col-md-6">
+                        <strong className="d-block mb-1 text-secondary" style={{ fontSize: '0.85rem' }}>Upload Versions</strong>
+                        {renderVersionBadges(current)}
+                      </div>
+                      <div className="col-md-6">
+                        <strong className="d-block mb-1 text-secondary" style={{ fontSize: '0.85rem' }}>Remarks</strong>
+                        <div className="text-muted small border rounded p-2 bg-light">{current.remarks || 'No remarks'}</div>
+                      </div>
+                    </div>
+
+                    <div className="border-top pt-3">
+                      <strong className="d-block mb-2 text-secondary" style={{ fontSize: '0.85rem' }}>Uploaded Files</strong>
+                      <div>{renderDocumentButtons(current)}</div>
+                    </div>
+
+                    <div className="border-top pt-3">
+                      <strong className="d-block mb-2 text-secondary" style={{ fontSize: '0.85rem' }}>Admin Review Feedback</strong>
+                      {hasReviewFeedback(current) ? (
+                        <div className="mt-2 d-grid gap-2">
+                          {getSubmissionReviewItems(current).map((item) => (
+                            <div key={`${item.key}-${item.index ?? 'single'}`} className="border rounded-3 px-3 py-2 d-flex justify-content-between align-items-start gap-3 bg-light">
+                              <div>
+                                <div className="fw-semibold" style={{ fontSize: '0.9rem' }}>{item.label}</div>
+                                <div className="small text-muted">{item.remarks || 'No document remarks.'}</div>
+                              </div>
+                              <span className={`badge ${item.checked ? 'text-bg-success' : 'text-bg-secondary'}`}>{item.checked ? 'Checked' : 'Pending Review'}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-muted small">No admin review feedback yet.</div>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -212,7 +272,16 @@ function CouncilDashboard() {
                         <div className="small text-muted">{item.collegeUnit || item.councilName || '—'}</div>
                       </td>
                       <td>{getProposalTypeLabel(item)}</td>
-                      <td>{item.status}</td>
+                      <td>
+                        <span className={`badge ${
+                          item.status === 'Approved' ? 'text-bg-success' :
+                          item.status === 'Returned' 
+                            ? (isOverdue(item.resubmissionDeadline) ? 'text-bg-danger' : 'text-bg-warning') :
+                          item.status === 'Archived' ? 'text-bg-secondary' : 'text-bg-info'
+                        }`}>
+                          {item.status === 'Returned' && isOverdue(item.resubmissionDeadline) ? 'Failed to Submit' : item.status}
+                        </span>
+                      </td>
                       <td>{formatDateTime(item.submissionDate || item.createdAt)}</td>
                     </tr>
                   ))}

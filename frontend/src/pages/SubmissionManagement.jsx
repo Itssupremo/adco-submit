@@ -84,74 +84,74 @@ const FILE_LABELS = {
 const PROPOSAL_RULES = {
   Academic: {
     visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
-    visibleMulti: ['supportingDocuments', 'vpaaAdministrativeCouncilPdfs'],
+    visibleMulti: ['supportingDocuments', 'vpaaAdministrativeCouncilPdfs', 'officeOfPresidentPdfs'],
     requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
     requiredMulti: ['supportingDocuments', 'vpaaAdministrativeCouncilPdfs'],
   },
   'Research & Extension': {
     visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
-    visibleMulti: ['supportingDocuments', 'vprdeUrdecPdfs'],
+    visibleMulti: ['supportingDocuments', 'vprdeUrdecPdfs', 'officeOfPresidentPdfs'],
     requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
     requiredMulti: ['supportingDocuments', 'vprdeUrdecPdfs'],
   },
   Administrative: {
     visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
-    visibleMulti: ['supportingDocuments', 'vpafFanCertificationPdfs'],
+    visibleMulti: ['supportingDocuments', 'vpafFanCertificationPdfs', 'officeOfPresidentPdfs'],
     requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
     requiredMulti: ['supportingDocuments', 'vpafFanCertificationPdfs'],
   },
   Finance: {
     visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
-    visibleMulti: ['supportingDocuments', 'vpafFanCertificationPdfs'],
+    visibleMulti: ['supportingDocuments', 'vpafFanCertificationPdfs', 'officeOfPresidentPdfs'],
     requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
     requiredMulti: ['supportingDocuments', 'vpafFanCertificationPdfs'],
   },
   Projects: {
     visibleSingle: ['executiveBriefPdf', 'executiveBriefWord'],
-    visibleMulti: ['supportingDocuments', 'vpafFanCertificationPdfs', 'iasEndorsementPdfs'],
+    visibleMulti: ['supportingDocuments', 'vpafFanCertificationPdfs', 'iasEndorsementPdfs', 'officeOfPresidentPdfs'],
     requiredSingle: ['executiveBriefPdf', 'executiveBriefWord'],
     requiredMulti: ['supportingDocuments', 'vpafFanCertificationPdfs', 'iasEndorsementPdfs'],
     requireIasCategory: true,
   },
   Production: {
     visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
-    visibleMulti: ['supportingDocuments', 'vprgesProductionCouncilPdfs'],
+    visibleMulti: ['supportingDocuments', 'vprgesProductionCouncilPdfs', 'officeOfPresidentPdfs'],
     requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
     requiredMulti: ['supportingDocuments', 'vprgesProductionCouncilPdfs'],
   },
   Usufruct: {
     visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'copyOfUsufructPdf', 'legalEndorsementPdf'],
-    visibleMulti: [],
+    visibleMulti: ['officeOfPresidentPdfs'],
     requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'copyOfUsufructPdf', 'legalEndorsementPdf'],
     requiredMulti: [],
   },
   'Deed of Donation': {
     visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'copyOfDeedOfDonationPdf', 'legalEndorsementPdf'],
-    visibleMulti: ['vpafFanCertificationPdfs'],
+    visibleMulti: ['vpafFanCertificationPdfs', 'officeOfPresidentPdfs'],
     requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'copyOfDeedOfDonationPdf', 'legalEndorsementPdf'],
     requiredMulti: ['vpafFanCertificationPdfs'],
   },
   'MOA/MOU (Academic)': {
     visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'summaryMatrixPdf', 'copyOfMoaMouPdf', 'legalEndorsementPdf'],
-    visibleMulti: ['vpafFanCertificationPdfs', 'vpaaAdministrativeCouncilPdfs'],
+    visibleMulti: ['vpafFanCertificationPdfs', 'vpaaAdministrativeCouncilPdfs', 'officeOfPresidentPdfs'],
     requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'summaryMatrixPdf', 'copyOfMoaMouPdf', 'legalEndorsementPdf'],
     requiredMulti: ['vpafFanCertificationPdfs', 'vpaaAdministrativeCouncilPdfs'],
   },
   'MOA/MOU (Research, Development, and Extension)': {
     visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'summaryMatrixPdf', 'copyOfMoaMouPdf', 'legalEndorsementPdf'],
-    visibleMulti: ['vpafFanCertificationPdfs', 'vprdeUrdecPdfs'],
+    visibleMulti: ['vpafFanCertificationPdfs', 'vprdeUrdecPdfs', 'officeOfPresidentPdfs'],
     requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'summaryMatrixPdf', 'copyOfMoaMouPdf', 'legalEndorsementPdf'],
     requiredMulti: ['vpafFanCertificationPdfs', 'vprdeUrdecPdfs'],
   },
   'MOA/MOU (Finance)': {
     visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'summaryMatrixPdf', 'copyOfMoaMouPdf', 'legalEndorsementPdf'],
-    visibleMulti: ['vpafFanCertificationPdfs'],
+    visibleMulti: ['vpafFanCertificationPdfs', 'officeOfPresidentPdfs'],
     requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'summaryMatrixPdf', 'copyOfMoaMouPdf', 'legalEndorsementPdf'],
     requiredMulti: ['vpafFanCertificationPdfs'],
   },
   'MOA/MOU (Administrative)': {
     visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'summaryMatrixPdf', 'copyOfMoaMouPdf', 'legalEndorsementPdf'],
-    visibleMulti: ['vpafFanCertificationPdfs'],
+    visibleMulti: ['vpafFanCertificationPdfs', 'officeOfPresidentPdfs'],
     requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'summaryMatrixPdf', 'copyOfMoaMouPdf', 'legalEndorsementPdf'],
     requiredMulti: ['vpafFanCertificationPdfs'],
   },
@@ -190,6 +190,20 @@ const createFormFromSubmission = (submission) => ({
 const fileExists = (file) => Boolean(file && (file.filename || file.s3Key));
 const getProposalTypeLabel = (submission) => submission.proposalType;
 const getProposalRule = (proposalType = '') => PROPOSAL_RULES[proposalType] || PROPOSAL_RULES.Academic;
+
+const toLocalDateTimeString = (dateInput) => {
+  if (!dateInput) return '';
+  const date = new Date(dateInput);
+  if (isNaN(date.getTime())) return '';
+  const offset = date.getTimezoneOffset();
+  const localDate = new Date(date.getTime() - offset * 60 * 1000);
+  return localDate.toISOString().slice(0, 16);
+};
+
+const isOverdue = (deadline) => {
+  if (!deadline) return false;
+  return new Date(deadline).getTime() < Date.now();
+};
 
 const isPdfFile = (file) => {
   if (!file) return false;
@@ -383,7 +397,7 @@ function SubmissionManagement({ user, councilView = 'history' }) {
   const [current, setCurrent] = useState(null);
   const [editingSubmission, setEditingSubmission] = useState(null);
   const [pdfModal, setPdfModal] = useState({ open: false, url: '', title: '' });
-  const [reviewModal, setReviewModal] = useState({ open: false, mode: 'view', submission: null, remarks: '', reviewChecklist: createEmptyReviewChecklist() });
+  const [reviewModal, setReviewModal] = useState({ open: false, mode: 'view', submission: null, remarks: '', reviewChecklist: createEmptyReviewChecklist(), resubmissionDeadline: '' });
   const [submitState, setSubmitState] = useState({ loading: false, successOpen: false, successMessage: '' });
 
   const load = () => {
@@ -503,9 +517,13 @@ function SubmissionManagement({ user, councilView = 'history' }) {
         });
       }
       if (action === 'return') {
-        const remarks = window.prompt('Enter remarks for the council:', submission.remarks || '');
+        const remarks = options.remarks || window.prompt('Enter remarks for the council:', submission.remarks || '');
         if (!remarks) return;
-        await returnSubmission(submission._id, remarks);
+        const confirmMsg = options.resubmissionDeadline
+          ? `Return submission "${submission.documentTitle}" with a deadline of ${new Date(options.resubmissionDeadline).toLocaleString()}?`
+          : `Return submission "${submission.documentTitle}" without a deadline?`;
+        if (!window.confirm(confirmMsg)) return;
+        await returnSubmission(submission._id, remarks, options.resubmissionDeadline || null);
       }
       if (action === 'archive') await archiveSubmission(submission._id);
       if (action === 'delete') {
@@ -525,6 +543,11 @@ function SubmissionManagement({ user, councilView = 'history' }) {
       ? {
           remarks: reviewModal.remarks,
           reviewChecklist: reviewModal.reviewChecklist,
+        }
+      : action === 'return'
+      ? {
+          remarks: reviewModal.remarks,
+          resubmissionDeadline: reviewModal.resubmissionDeadline,
         }
       : {};
     await boardActions(action, reviewModal.submission, options);
@@ -560,10 +583,11 @@ function SubmissionManagement({ user, councilView = 'history' }) {
       submission,
       remarks: draft.remarks,
       reviewChecklist: draft.reviewChecklist,
+      resubmissionDeadline: toLocalDateTimeString(submission?.resubmissionDeadline),
     });
   };
 
-  const closeReviewModal = () => setReviewModal({ open: false, mode: 'view', submission: null, remarks: '', reviewChecklist: createEmptyReviewChecklist() });
+  const closeReviewModal = () => setReviewModal({ open: false, mode: 'view', submission: null, remarks: '', reviewChecklist: createEmptyReviewChecklist(), resubmissionDeadline: '' });
 
   const updateReviewEntry = (key, field, value, index = null) => {
     setReviewModal((prev) => {
@@ -600,7 +624,7 @@ function SubmissionManagement({ user, councilView = 'history' }) {
     }
   };
 
-  const renderDocumentButtons = (submission) => {
+  const renderDocumentButtons = (submission, justifyClass = 'justify-content-start') => {
     const buttons = getSubmissionDocuments(submission).map((item) => ({
       label: item.label
         .replace('Executive Brief ', 'Brief ')
@@ -619,7 +643,7 @@ function SubmissionManagement({ user, councilView = 'history' }) {
     if (buttons.length === 0) return <span className="text-muted">No files</span>;
 
     return (
-      <div className="d-flex gap-2 flex-wrap justify-content-end">
+      <div className={`d-flex gap-2 flex-wrap ${justifyClass}`}>
         {buttons.map((button) => (
           <button
             type="button"
@@ -852,39 +876,95 @@ function SubmissionManagement({ user, councilView = 'history' }) {
                     {!current ? (
                       <div className="text-muted">No active submission yet.</div>
                     ) : (
-                      <div className="row g-3">
-                        <div className="col-md-6"><strong>College/Unit:</strong><div>{current.collegeUnit}</div></div>
-                        <div className="col-md-6"><strong>Proposal Type:</strong><div>{getProposalTypeLabel(current)}</div></div>
-                        <div className="col-md-8"><strong>Title:</strong><div>{current.documentTitle}</div></div>
-                        <div className="col-md-4"><strong>Status:</strong><div>{current.status}</div></div>
-                        <div className="col-12"><strong>Upload Versions:</strong>{renderVersionBadges(current)}</div>
-                        <div className="col-12"><strong>Remarks:</strong><div>{current.remarks || 'No remarks'}</div></div>
-                        <div className="col-12"><strong>Files:</strong><div className="mt-2">{renderDocumentButtons(current)}</div></div>
-                        {current.status === 'Returned' ? (
-                          <div className="col-12">
-                            <button type="button" className="btn btn-warning" onClick={() => openReturnedSubmissionEditor(current)}>Edit Returned Submission</button>
+                      <div>
+                        <div className="submission-overview-grid">
+                          <div className="overview-item">
+                            <span className="overview-label">College / Unit</span>
+                            <span className="overview-value">{current.collegeUnit}</span>
                           </div>
-                        ) : null}
-                        <div className="col-12">
-                          <strong>Admin Review:</strong>
-                          {hasReviewFeedback(current) ? (
-                            <div className="mt-2 d-grid gap-2">
-                              {getSubmissionReviewItems(current).map((item) => (
-                                <div key={`${item.key}-${item.index ?? 'single'}`} className="border rounded-3 px-3 py-2 d-flex justify-content-between align-items-start gap-3">
-                                  <div>
-                                    <div className="fw-semibold">{item.label}</div>
-                                    <div className="small text-muted">{item.remarks || 'No document remarks.'}</div>
-                                  </div>
-                                  <span className={`badge ${item.checked ? 'text-bg-success' : 'text-bg-secondary'}`}>{item.checked ? 'Checked' : 'Pending Review'}</span>
-                                </div>
-                              ))}
+                          <div className="overview-item">
+                            <span className="overview-label">Proposal Type</span>
+                            <span className="overview-value">{getProposalTypeLabel(current)}</span>
+                          </div>
+                          <div className="overview-item">
+                            <span className="overview-label">Proposal Title</span>
+                            <span className="overview-value fw-semibold">{current.documentTitle}</span>
+                          </div>
+                          <div className="overview-item">
+                            <span className="overview-label">Status</span>
+                            <div className="overview-value">
+                              <span className={`badge ${
+                                current.status === 'Approved' ? 'bg-success' :
+                                current.status === 'Returned' 
+                                  ? (isOverdue(current.resubmissionDeadline) ? 'bg-danger text-white' : 'bg-warning text-dark') :
+                                current.status === 'Archived' ? 'bg-secondary' : 'bg-info text-dark'
+                              }`}>
+                                {current.status === 'Returned' && isOverdue(current.resubmissionDeadline) ? 'Failed to Submit' : current.status}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="d-flex flex-column gap-3 mt-3">
+                          {current.status === 'Returned' && current.resubmissionDeadline ? (
+                            <div className={`alert ${isOverdue(current.resubmissionDeadline) ? 'alert-danger' : 'alert-warning'} py-2.5 px-3 mb-0 d-flex align-items-center`}>
+                              <i className={`bi ${isOverdue(current.resubmissionDeadline) ? 'bi-exclamation-triangle-fill' : 'bi-clock-fill'} me-2 fs-5`} />
                               <div>
-                                <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => openReviewModal(current, 'view')}>View Review Details</button>
+                                {isOverdue(current.resubmissionDeadline) ? (
+                                  <span><strong>Resubmission deadline has passed.</strong> This submission is now locked and cannot be revised.</span>
+                                ) : (
+                                  <span>
+                                    <strong>Resubmission Deadline:</strong> {new Date(current.resubmissionDeadline).toLocaleString()}
+                                    <span className="text-muted ms-2">({Math.ceil((new Date(current.resubmissionDeadline) - new Date()) / (1000 * 60 * 60 * 24))} days remaining)</span>
+                                  </span>
+                                )}
                               </div>
                             </div>
-                          ) : (
-                            <div className="text-muted mt-2">No admin review feedback yet.</div>
-                          )}
+                          ) : null}
+
+                          <div className="row g-3">
+                            <div className="col-md-6">
+                              <strong className="d-block mb-1 text-secondary" style={{ fontSize: '0.85rem' }}>Upload Versions</strong>
+                              {renderVersionBadges(current)}
+                            </div>
+                            <div className="col-md-6">
+                              <strong className="d-block mb-1 text-secondary" style={{ fontSize: '0.85rem' }}>Remarks</strong>
+                              <div className="text-muted small border rounded p-2 bg-light">{current.remarks || 'No remarks'}</div>
+                            </div>
+                          </div>
+
+                          <div className="border-top pt-3">
+                            <strong className="d-block mb-2 text-secondary" style={{ fontSize: '0.85rem' }}>Uploaded Files</strong>
+                            <div>{renderDocumentButtons(current, 'justify-content-start')}</div>
+                          </div>
+
+                          {current.status === 'Returned' && !isOverdue(current.resubmissionDeadline) ? (
+                            <div className="pt-2">
+                              <button type="button" className="btn btn-warning" onClick={() => openReturnedSubmissionEditor(current)}>Edit Returned Submission</button>
+                            </div>
+                          ) : null}
+
+                          <div className="border-top pt-3">
+                            <strong className="d-block mb-2 text-secondary" style={{ fontSize: '0.85rem' }}>Admin Review Feedback</strong>
+                            {hasReviewFeedback(current) ? (
+                              <div className="mt-2 d-grid gap-2">
+                                {getSubmissionReviewItems(current).map((item) => (
+                                  <div key={`${item.key}-${item.index ?? 'single'}`} className="border rounded-3 px-3 py-2 d-flex justify-content-between align-items-start gap-3 bg-light">
+                                    <div>
+                                      <div className="fw-semibold" style={{ fontSize: '0.9rem' }}>{item.label}</div>
+                                      <div className="small text-muted">{item.remarks || 'No document remarks.'}</div>
+                                    </div>
+                                    <span className={`badge ${item.checked ? 'text-bg-success' : 'text-bg-secondary'}`}>{item.checked ? 'Checked' : 'Pending Review'}</span>
+                                  </div>
+                                ))}
+                                <div className="mt-1">
+                                  <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => openReviewModal(current, 'view')}>View Full Details</button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="text-muted small">No admin review feedback yet.</div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     )}
@@ -904,7 +984,21 @@ function SubmissionManagement({ user, councilView = 'history' }) {
                               {renderVersionBadges(submission)}
                             </td>
                             <td>{getProposalTypeLabel(submission)}</td>
-                            <td>{submission.status}</td>
+                            <td>
+                              <span className={`badge ${
+                                submission.status === 'Approved' ? 'bg-success' :
+                                submission.status === 'Returned' 
+                                  ? (isOverdue(submission.resubmissionDeadline) ? 'bg-danger text-white' : 'bg-warning text-dark') :
+                                submission.status === 'Archived' ? 'bg-secondary' : 'bg-info text-dark'
+                              }`}>
+                                {submission.status === 'Returned' && isOverdue(submission.resubmissionDeadline) ? 'Failed to Submit' : submission.status}
+                              </span>
+                              {submission.status === 'Returned' && submission.resubmissionDeadline && (
+                                <div className={`small mt-1 ${isOverdue(submission.resubmissionDeadline) ? 'text-danger fw-semibold' : 'text-muted'}`}>
+                                  DL: {new Date(submission.resubmissionDeadline).toLocaleDateString()}
+                                </div>
+                              )}
+                            </td>
                             <td>
                               {hasReviewFeedback(submission) ? (
                                 <div className="d-flex align-items-center gap-2 flex-wrap">
@@ -914,13 +1008,13 @@ function SubmissionManagement({ user, councilView = 'history' }) {
                               ) : (
                                 <span className="text-muted">No feedback yet</span>
                               )}
-                              {submission.status === 'Returned' ? (
+                              {submission.status === 'Returned' && !isOverdue(submission.resubmissionDeadline) ? (
                                 <div className="mt-2">
                                   <button type="button" className="btn btn-sm btn-warning" onClick={() => openReturnedSubmissionEditor(submission)}>Edit</button>
                                 </div>
                               ) : null}
                             </td>
-                            <td className="text-end">{renderDocumentButtons(submission)}</td>
+                            <td className="text-end">{renderDocumentButtons(submission, 'justify-content-end')}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -951,7 +1045,25 @@ function SubmissionManagement({ user, councilView = 'history' }) {
                       <td>{submission.collegeUnit || submission.councilName}</td>
                       <td>{submission.documentTitle}</td>
                       <td>{getProposalTypeLabel(submission)}</td>
-                      <td>{submission.status}</td>
+                      <td>
+                        <span className={`badge ${
+                          submission.status === 'Approved' ? 'bg-success' :
+                          submission.status === 'Returned' 
+                            ? (isOverdue(submission.resubmissionDeadline) ? 'bg-danger text-white' : 'bg-warning text-dark') :
+                          submission.status === 'Archived' ? 'bg-secondary' : 'bg-info text-dark'
+                        }`}>
+                          {submission.status === 'Returned' && isOverdue(submission.resubmissionDeadline) ? 'Failed to Submit' : submission.status}
+                        </span>
+                        {submission.status === 'Returned' && submission.resubmissionDeadline && (
+                          <div className={`small mt-1 d-flex align-items-center gap-1 ${isOverdue(submission.resubmissionDeadline) ? 'text-danger fw-semibold' : 'text-muted'}`}>
+                            <i className="bi bi-clock-fill" />
+                            <span>
+                              DL: {new Date(submission.resubmissionDeadline).toLocaleDateString()}
+                              {isOverdue(submission.resubmissionDeadline) && <span className="ms-1 badge bg-danger text-white px-1 py-0" style={{ fontSize: '0.65rem' }}>LOCKED</span>}
+                            </span>
+                          </div>
+                        )}
+                      </td>
                       <td>{submission.remarks || '—'}</td>
                       <td>{getSubmissionDocuments(submission).length} document(s)</td>
                       <td className="text-end">
@@ -982,9 +1094,29 @@ function SubmissionManagement({ user, councilView = 'history' }) {
               </div>
               <div className="modal-body">
                 <div className="row g-3 mb-4">
-                  <div className="col-md-4"><strong>College/Unit:</strong><div>{reviewModal.submission.collegeUnit || reviewModal.submission.councilName}</div></div>
-                  <div className="col-md-4"><strong>Proposal Type:</strong><div>{getProposalTypeLabel(reviewModal.submission)}</div></div>
-                  <div className="col-md-4"><strong>Status:</strong><div>{reviewModal.submission.status}</div></div>
+                  <div className="col-md-3"><strong>College/Unit:</strong><div>{reviewModal.submission.collegeUnit || reviewModal.submission.councilName}</div></div>
+                  <div className="col-md-3"><strong>Proposal Type:</strong><div>{getProposalTypeLabel(reviewModal.submission)}</div></div>
+                  <div className="col-md-3">
+                    <strong>Status:</strong>
+                    <div>
+                      {reviewModal.submission.status}
+                      {reviewModal.submission.status === 'Returned' && reviewModal.submission.resubmissionDeadline && isOverdue(reviewModal.submission.resubmissionDeadline) && (
+                        <span className="badge bg-danger ms-2 text-white">OVERDUE</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="col-md-3">
+                    <strong>Resubmission Deadline:</strong>
+                    <div>
+                      {reviewModal.submission.resubmissionDeadline ? (
+                        <span className={reviewModal.submission.status === 'Returned' && isOverdue(reviewModal.submission.resubmissionDeadline) ? 'text-danger fw-semibold' : ''}>
+                          {new Date(reviewModal.submission.resubmissionDeadline).toLocaleString()}
+                        </span>
+                      ) : (
+                        <span className="text-muted">—</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 <div className="table-responsive">
@@ -1041,16 +1173,31 @@ function SubmissionManagement({ user, councilView = 'history' }) {
                   </table>
                 </div>
 
-                <div className="mt-4">
-                  <label className="form-label">General Remarks</label>
-                  <textarea
-                    className="form-control"
-                    rows="3"
-                    value={reviewModal.remarks}
-                    disabled={reviewModal.mode !== 'edit'}
-                    placeholder="Add overall remarks for this submission"
-                    onChange={(e) => setReviewModal((prev) => ({ ...prev, remarks: e.target.value }))}
-                  />
+                <div className="mt-4 row g-3">
+                  <div className="col-md-6">
+                    <label className="form-label fw-semibold">General Remarks</label>
+                    <textarea
+                      className="form-control"
+                      rows="3"
+                      value={reviewModal.remarks}
+                      disabled={reviewModal.mode !== 'edit'}
+                      placeholder="Add overall remarks for this submission"
+                      onChange={(e) => setReviewModal((prev) => ({ ...prev, remarks: e.target.value }))}
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label fw-semibold">Resubmission Deadline</label>
+                    <input
+                      type="datetime-local"
+                      className="form-control"
+                      value={reviewModal.resubmissionDeadline}
+                      disabled={reviewModal.mode !== 'edit'}
+                      onChange={(e) => setReviewModal((prev) => ({ ...prev, resubmissionDeadline: e.target.value }))}
+                    />
+                    <div className="form-text text-muted">
+                      Specify the date and time by which the council must resubmit their revisions. Leave blank if no deadline is required.
+                    </div>
+                  </div>
                 </div>
               </div>
               <div className="modal-footer">

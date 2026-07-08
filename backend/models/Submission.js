@@ -99,6 +99,7 @@ const submissionSchema = new mongoose.Schema({
   approvedBy: { type: actorSchema, default: () => ({}) },
   returnedBy: { type: actorSchema, default: () => ({}) },
   archivedBy: { type: actorSchema, default: () => ({}) },
+  resubmissionDeadline: { type: Date, default: null },
 }, { timestamps: true });
 
 submissionSchema.index({ councilId: 1, status: 1 });

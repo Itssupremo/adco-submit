@@ -74,80 +74,80 @@ const LEGACY_ARRAY_COMPATIBILITY = {
 const PROPOSAL_RULES = {
   Academic: {
     visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
-    visibleMulti: ['supportingDocuments', 'vpaaAdministrativeCouncilPdfs'],
+    visibleMulti: ['supportingDocuments', 'vpaaAdministrativeCouncilPdfs', 'officeOfPresidentPdfs'],
     requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
     requiredMulti: ['supportingDocuments', 'vpaaAdministrativeCouncilPdfs'],
   },
   'Research & Extension': {
     visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
-    visibleMulti: ['supportingDocuments', 'vprdeUrdecPdfs'],
+    visibleMulti: ['supportingDocuments', 'vprdeUrdecPdfs', 'officeOfPresidentPdfs'],
     requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
     requiredMulti: ['supportingDocuments', 'vprdeUrdecPdfs'],
   },
   Administrative: {
     visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
-    visibleMulti: ['supportingDocuments', 'vpafFanCertificationPdfs'],
+    visibleMulti: ['supportingDocuments', 'vpafFanCertificationPdfs', 'officeOfPresidentPdfs'],
     requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
     requiredMulti: ['supportingDocuments', 'vpafFanCertificationPdfs'],
   },
   Finance: {
     visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
-    visibleMulti: ['supportingDocuments', 'vpafFanCertificationPdfs'],
+    visibleMulti: ['supportingDocuments', 'vpafFanCertificationPdfs', 'officeOfPresidentPdfs'],
     requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
     requiredMulti: ['supportingDocuments', 'vpafFanCertificationPdfs'],
   },
   Projects: {
     visibleSingle: ['executiveBriefPdf', 'executiveBriefWord'],
-    visibleMulti: ['supportingDocuments', 'vpafFanCertificationPdfs', 'iasEndorsementPdfs'],
+    visibleMulti: ['supportingDocuments', 'vpafFanCertificationPdfs', 'iasEndorsementPdfs', 'officeOfPresidentPdfs'],
     requiredSingle: ['executiveBriefPdf', 'executiveBriefWord'],
     requiredMulti: ['supportingDocuments', 'vpafFanCertificationPdfs', 'iasEndorsementPdfs'],
     requireIasCategory: true,
   },
   Production: {
     visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
-    visibleMulti: ['supportingDocuments', 'vprgesProductionCouncilPdfs'],
+    visibleMulti: ['supportingDocuments', 'vprgesProductionCouncilPdfs', 'officeOfPresidentPdfs'],
     requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'proposalPdf', 'proposalWord'],
     requiredMulti: ['supportingDocuments', 'vprgesProductionCouncilPdfs'],
   },
   Usufruct: {
     visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'copyOfUsufructPdf', 'legalEndorsementPdf'],
-    visibleMulti: [],
+    visibleMulti: ['officeOfPresidentPdfs'],
     requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'copyOfUsufructPdf', 'legalEndorsementPdf'],
     requiredMulti: [],
   },
   'Deed of Donation': {
     visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'copyOfDeedOfDonationPdf', 'legalEndorsementPdf'],
-    visibleMulti: ['vpafFanCertificationPdfs'],
+    visibleMulti: ['vpafFanCertificationPdfs', 'officeOfPresidentPdfs'],
     requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'copyOfDeedOfDonationPdf', 'legalEndorsementPdf'],
     requiredMulti: ['vpafFanCertificationPdfs'],
   },
   'MOA/MOU (Academic)': {
     visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'summaryMatrixPdf', 'copyOfMoaMouPdf', 'legalEndorsementPdf'],
-    visibleMulti: ['vpafFanCertificationPdfs', 'vpaaAdministrativeCouncilPdfs'],
+    visibleMulti: ['vpafFanCertificationPdfs', 'vpaaAdministrativeCouncilPdfs', 'officeOfPresidentPdfs'],
     requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'summaryMatrixPdf', 'copyOfMoaMouPdf', 'legalEndorsementPdf'],
     requiredMulti: ['vpafFanCertificationPdfs', 'vpaaAdministrativeCouncilPdfs'],
   },
   'MOA/MOU (Research, Development, and Extension)': {
     visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'summaryMatrixPdf', 'copyOfMoaMouPdf', 'legalEndorsementPdf'],
-    visibleMulti: ['vpafFanCertificationPdfs', 'vprdeUrdecPdfs'],
+    visibleMulti: ['vpafFanCertificationPdfs', 'vprdeUrdecPdfs', 'officeOfPresidentPdfs'],
     requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'summaryMatrixPdf', 'copyOfMoaMouPdf', 'legalEndorsementPdf'],
     requiredMulti: ['vpafFanCertificationPdfs', 'vprdeUrdecPdfs'],
   },
   'MOA/MOU (Finance)': {
     visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'summaryMatrixPdf', 'copyOfMoaMouPdf', 'legalEndorsementPdf'],
-    visibleMulti: ['vpafFanCertificationPdfs'],
+    visibleMulti: ['vpafFanCertificationPdfs', 'officeOfPresidentPdfs'],
     requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'summaryMatrixPdf', 'copyOfMoaMouPdf', 'legalEndorsementPdf'],
     requiredMulti: ['vpafFanCertificationPdfs'],
   },
   'MOA/MOU (Administrative)': {
     visibleSingle: ['executiveBriefPdf', 'executiveBriefWord', 'summaryMatrixPdf', 'copyOfMoaMouPdf', 'legalEndorsementPdf'],
-    visibleMulti: ['vpafFanCertificationPdfs'],
+    visibleMulti: ['vpafFanCertificationPdfs', 'officeOfPresidentPdfs'],
     requiredSingle: ['executiveBriefPdf', 'executiveBriefWord', 'summaryMatrixPdf', 'copyOfMoaMouPdf', 'legalEndorsementPdf'],
     requiredMulti: ['vpafFanCertificationPdfs'],
   },
   'For Information': {
     visibleSingle: ['presentationPdf', 'forInformationProposalPdf'],
-    visibleMulti: [],
+    visibleMulti: ['officeOfPresidentPdfs'],
     requiredSingle: [],
     requiredMulti: [],
     requiresAnyOf: ['presentationPdf', 'forInformationProposalPdf'],
@@ -718,6 +718,9 @@ exports.replaceSubmission = async (req, res) => {
     if (!['Pending', 'Returned'].includes(submission.status)) {
       return res.status(400).json({ message: 'Only pending or returned submissions can be replaced' });
     }
+    if (submission.status === 'Returned' && submission.resubmissionDeadline && new Date(submission.resubmissionDeadline) < new Date()) {
+      return res.status(400).json({ message: 'The resubmission deadline has passed. This submission is now locked.' });
+    }
 
     const uploadedFiles = getUploadedFiles(req);
     const typeError = validateUploadedTypes(uploadedFiles);
@@ -758,6 +761,7 @@ exports.replaceSubmission = async (req, res) => {
     submission.status = 'Pending';
     submission.remarks = '';
     submission.returnedBy = actorFromUser(null);
+    submission.resubmissionDeadline = null;
 
     await submission.save();
 
@@ -813,7 +817,7 @@ exports.approveSubmission = async (req, res) => {
 
 exports.returnSubmission = async (req, res) => {
   try {
-    const { remarks } = req.body;
+    const { remarks, resubmissionDeadline } = req.body;
     if (!remarks) return res.status(400).json({ message: 'Remarks are required when returning a submission' });
 
     const submission = await Submission.findById(req.params.id);
@@ -821,16 +825,25 @@ exports.returnSubmission = async (req, res) => {
 
     submission.status = 'Returned';
     submission.remarks = remarks;
+    submission.resubmissionDeadline = resubmissionDeadline || null;
     submission.returnedBy = actorFromUser(req.user);
     await submission.save();
+
+    const formattedDeadline = resubmissionDeadline
+      ? new Date(resubmissionDeadline).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
+      : null;
+
+    const notificationMessage = formattedDeadline
+      ? `${submission.documentTitle} was returned for revision. Deadline: ${formattedDeadline}.`
+      : `${submission.documentTitle} was returned for revision.`;
 
     const councilUsers = await User.find({ role: 'council', councilId: submission.councilId, isActive: true }).select('_id');
     await Promise.all(councilUsers.map((user) => createNotification({
       userId: user._id,
       type: 'SUBMISSION_RETURNED',
       title: 'Submission returned',
-      message: `${submission.documentTitle} was returned for revision.`,
-      meta: { submissionId: submission._id, remarks },
+      message: notificationMessage,
+      meta: { submissionId: submission._id, remarks, resubmissionDeadline },
     })));
 
     logActivity(req, 'RETURN_SUBMISSION', `Returned submission for ${submission.councilName}`);

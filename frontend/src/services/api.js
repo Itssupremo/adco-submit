@@ -44,7 +44,7 @@ export const replaceSubmission = (id, formData) => API.put(`/submissions/${id}/r
 });
 export const updateSubmissionReview = (id, data) => API.put(`/submissions/${id}/review`, data);
 export const approveSubmission = (id, data = {}) => API.put(`/submissions/${id}/approve`, data);
-export const returnSubmission = (id, remarks) => API.put(`/submissions/${id}/return`, { remarks });
+export const returnSubmission = (id, remarks, resubmissionDeadline) => API.put(`/submissions/${id}/return`, { remarks, resubmissionDeadline });
 export const archiveSubmission = (id) => API.put(`/submissions/${id}/archive`);
 export const deleteSubmission = (id) => API.delete(`/submissions/${id}`);
 export const getSubmissionFileUrl = (id, key, options = {}) => {
