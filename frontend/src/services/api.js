@@ -44,7 +44,7 @@ export const replaceSubmission = (id, formData) => API.put(`/submissions/${id}/r
 });
 export const updateSubmissionReview = (id, data) => API.put(`/submissions/${id}/review`, data);
 export const approveSubmission = (id, data = {}) => API.put(`/submissions/${id}/approve`, data);
-export const returnSubmission = (id, remarks, resubmissionDeadline) => API.put(`/submissions/${id}/return`, { remarks, resubmissionDeadline });
+export const returnSubmission = (id, remarks, resubmissionDeadline, reviewChecklist) => API.put(`/submissions/${id}/return`, { remarks, resubmissionDeadline, reviewChecklist });
 export const archiveSubmission = (id) => API.put(`/submissions/${id}/archive`);
 export const deleteSubmission = (id) => API.delete(`/submissions/${id}`);
 export const getSubmissionFileUrl = (id, key, options = {}) => {
@@ -59,6 +59,9 @@ export const getSubmissionFileUrl = (id, key, options = {}) => {
 export const getNotifications = () => API.get('/notifications');
 export const markNotificationRead = (id) => API.put(`/notifications/${id}/read`);
 export const markAllNotificationsRead = () => API.put('/notifications/read-all');
+export const clearAllNotifications = () => API.delete('/notifications/clear');
+
+export const clearActivityLogs = () => API.delete('/logs/clear');
 
 export const getSubmissionReports = (params = {}) => API.get('/reports/submissions', { params });
 export const exportSubmissionReport = (params = {}, format = 'xlsx') =>

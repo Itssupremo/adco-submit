@@ -1,43 +1,47 @@
 import { useEffect, useState } from 'react';
-import { getNotifications, getSubmissions } from '../services/api';
+import { getSubmissions } from '../services/api';
 
 function BoardDashboard() {
   const [submissions, setSubmissions] = useState([]);
-  const [notifications, setNotifications] = useState([]);
 
   useEffect(() => {
-    Promise.all([getSubmissions(), getNotifications()])
-      .then(([submissionsRes, notificationsRes]) => {
+    getSubmissions()
+      .then((submissionsRes) => {
         setSubmissions(submissionsRes.data);
-        setNotifications(notificationsRes.data.slice(0, 5));
       })
       .catch(() => {});
   }, []);
 
-  const pending = submissions.filter((item) => item.status === 'Pending').length;
+  const pending = submissions.filter((item) => item.status === 'Pending' || item.status === 'Under Review').length;
   const approved = submissions.filter((item) => item.status === 'Approved').length;
   const returned = submissions.filter((item) => item.status === 'Returned').length;
 
   return (
     <div>
-      <div className="mb-4">
-        <h2 className="page-section-title mb-0">USM Board Dashboard</h2>
-        <p className="page-section-sub mb-0">Review council submissions, monitor pending documents, and act on board decisions.</p>
+      <div className="d-flex justify-content-between align-items-end mb-4 border-bottom pb-3">
+        <div>
+          <h2 className="page-section-title mb-1">USM Board Dashboard</h2>
+          <p className="page-section-sub mb-0 text-muted">Review council submissions, monitor pending documents, and act on board decisions.</p>
+        </div>
       </div>
 
-      <div className="row g-3 mb-4">
+      <div className="row g-4 mb-4">
         {[
-          { label: 'Pending Review', value: pending, className: 'stat-card-gold', icon: 'bi-hourglass-split' },
-          { label: 'Approved', value: approved, className: 'stat-card-green', icon: 'bi-patch-check-fill' },
-          { label: 'Returned', value: returned, className: 'stat-card-purple', icon: 'bi-arrow-counterclockwise' },
-          { label: 'Recent Uploads', value: submissions.length, className: 'stat-card-navy', icon: 'bi-cloud-arrow-up-fill' },
+          { label: 'Pending Review', value: pending, color: 'warning', icon: 'bi-hourglass-split' },
+          { label: 'Approved', value: approved, color: 'success', icon: 'bi-patch-check' },
+          { label: 'Returned', value: returned, color: 'danger', icon: 'bi-arrow-counterclockwise' },
+          { label: 'Recent Uploads', value: submissions.length, color: 'primary', icon: 'bi-cloud-arrow-up' },
         ].map((card) => (
           <div className="col-6 col-lg-3" key={card.label}>
-            <div className={`card stat-card ${card.className}`}>
-              <div className="card-body">
-                <div className="stat-card-icon"><i className={`bi ${card.icon}`} /></div>
-                <div style={{ fontSize: '0.75rem', fontWeight: 700, opacity: 0.75, textTransform: 'uppercase', marginBottom: 6 }}>{card.label}</div>
-                <div style={{ fontSize: '2rem', fontWeight: 900 }}>{card.value}</div>
+            <div className={`card border-0 shadow-sm border-bottom border-4 border-${card.color} h-100`}>
+              <div className="card-body d-flex justify-content-between align-items-center p-4">
+                <div>
+                  <h6 className="text-muted text-uppercase fw-semibold mb-2" style={{ letterSpacing: '0.5px', fontSize: '0.75rem' }}>{card.label}</h6>
+                  <h3 className="mb-0 fw-bold">{card.value}</h3>
+                </div>
+                <div className={`text-${card.color} bg-${card.color} bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center`} style={{ width: '48px', height: '48px' }}>
+                  <i className={`bi ${card.icon} fs-4`}></i>
+                </div>
               </div>
             </div>
           </div>
@@ -45,31 +49,49 @@ function BoardDashboard() {
       </div>
 
       <div className="row g-4">
-        <div className="col-lg-8">
-          <div className="card">
-            <div className="card-header bg-primary"><h5 className="mb-0">Recent Submissions</h5></div>
-            <div className="card-body table-responsive">
-              <table className="table table-striped align-middle mb-0">
-                <thead><tr><th>Council</th><th>Title</th><th>Status</th><th>Submitted</th></tr></thead>
-                <tbody>
-                  {submissions.slice(0, 8).map((item) => (
-                    <tr key={item._id}><td>{item.councilName}</td><td>{item.documentTitle}</td><td>{item.status}</td><td>{item.submissionDate}</td></tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-        <div className="col-lg-4">
-          <div className="card">
-            <div className="card-header bg-primary"><h5 className="mb-0">Notifications</h5></div>
-            <div className="card-body">
-              {notifications.length === 0 ? <div className="text-muted">No notifications.</div> : notifications.map((item) => (
-                <div key={item._id} className="border-bottom pb-2 mb-2">
-                  <div className="fw-semibold">{item.title}</div>
-                  <div className="small text-muted">{item.message}</div>
-                </div>
-              ))}
+        <div className="col-12">
+          <div className="card border-0 shadow-sm">
+            <div className="card-body p-0">
+              <div className="table-responsive">
+                <table className="table table-hover align-middle mb-0">
+                  <thead className="table-light">
+                    <tr>
+                      <th className="px-4 py-3 text-secondary" style={{ fontSize: '0.85rem' }}>COUNCIL</th>
+                      <th className="py-3 text-secondary" style={{ fontSize: '0.85rem' }}>TITLE</th>
+                      <th className="py-3 text-secondary" style={{ fontSize: '0.85rem' }}>SUBMITTED</th>
+                      <th className="px-4 py-3 text-secondary text-center" style={{ fontSize: '0.85rem' }}>STATUS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {submissions.slice(0, 8).map((item) => (
+                      <tr key={item._id}>
+                        <td className="px-4 fw-medium text-dark">{item.councilName}</td>
+                        <td>{item.documentTitle}</td>
+                        <td>{item.submissionDate}</td>
+                        <td className="px-4 text-center">
+                          <span className={`badge rounded-pill fw-normal px-3 py-2 ${
+                            item.status === 'Approved' ? 'bg-success bg-opacity-10 text-success' :
+                            item.status === 'Returned' ? 'bg-danger bg-opacity-10 text-danger' :
+                            item.status === 'Archived' ? 'bg-secondary bg-opacity-10 text-secondary' :
+                            item.status === 'Under Review' ? 'bg-primary bg-opacity-10 text-primary' :
+                            'bg-warning bg-opacity-10 text-warning-emphasis'
+                          }`}>
+                            {item.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                    {submissions.length === 0 && (
+                      <tr>
+                        <td colSpan="4" className="text-center py-5 text-muted">
+                          <i className="bi bi-inbox fs-2 d-block mb-2"></i>
+                          No recent submissions found.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>

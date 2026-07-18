@@ -15,6 +15,7 @@ import Notifications from './pages/Notifications';
 import ActivityLogs from './pages/ActivityLogs';
 import Settings from './pages/Settings';
 import { getMe } from './services/api';
+import NotificationDropdown from './components/NotificationDropdown';
 
 const PAGE_TITLES = {
   '/admin': 'Super Admin Dashboard',
@@ -51,6 +52,7 @@ function AuthenticatedLayout({ user, onLogout, sidebarOpen, setSidebarOpen, dark
             <i className="bi bi-list" />
           </button>
           <span className="app-topbar-title">{title}</span>
+          <NotificationDropdown user={user} />
           <button
             className="darkmode-toggle"
             onClick={toggleDarkMode}
@@ -156,7 +158,7 @@ function App() {
         >
           <Routes>
             <Route path="/my-account" element={<MyAccount user={user} onUserUpdate={refreshUser} />} />
-            <Route path="/notifications" element={<Notifications />} />
+            <Route path="/notifications" element={<Notifications user={user} />} />
 
             <Route path="/admin" element={user.role === 'superadmin' ? <SuperAdminDashboard /> : <Navigate to={user.role === 'board' ? '/board' : '/council'} />} />
             <Route path="/admin/users" element={user.role === 'superadmin' ? <UserManagement /> : <Navigate to={user.role === 'board' ? '/board' : '/council'} />} />

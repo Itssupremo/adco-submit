@@ -43,6 +43,7 @@ const actorSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   username: { type: String, trim: true, default: '' },
   fullname: { type: String, trim: true, default: '' },
+  date: { type: Date, default: null },
 }, { _id: false });
 
 const reviewItemSchema = new mongoose.Schema({
@@ -74,6 +75,11 @@ const reviewChecklistSchema = new mongoose.Schema({
   officeOfPresidentPdfs: { type: [reviewItemSchema], default: [] },
   iasEndorsementPdfs: { type: [reviewItemSchema], default: [] },
 }, { _id: false });
+const auditEventSchema = new mongoose.Schema({
+  actor: { type: actorSchema, required: true },
+  action: { type: String, required: true },
+  date: { type: Date, default: Date.now }
+}, { _id: false });
 
 const submissionSchema = new mongoose.Schema({
   councilId: { type: mongoose.Schema.Types.ObjectId, ref: 'Council', required: true },
@@ -90,16 +96,18 @@ const submissionSchema = new mongoose.Schema({
   meetingDate: { type: String, trim: true, default: '' },
   submissionDate: { type: String, trim: true, default: '' },
   remarks: { type: String, trim: true, default: '' },
-  status: { type: String, enum: ['Pending', 'Returned', 'Approved', 'Archived'], default: 'Pending' },
+  status: { type: String, enum: ['Pending', 'Under Review', 'Returned', 'Approved', 'Archived'], default: 'Pending' },
   files: { type: packetFilesSchema, default: () => ({}) },
   reviewChecklist: { type: reviewChecklistSchema, default: () => ({}) },
   packetVersion: { type: Number, default: 1 },
   packetHistory: { type: [packetSnapshotSchema], default: [] },
   submittedByUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  reviewedBy: { type: actorSchema, default: () => ({}) },
   approvedBy: { type: actorSchema, default: () => ({}) },
   returnedBy: { type: actorSchema, default: () => ({}) },
   archivedBy: { type: actorSchema, default: () => ({}) },
   resubmissionDeadline: { type: Date, default: null },
+  auditTrail: { type: [auditEventSchema], default: [] },
 }, { timestamps: true });
 
 submissionSchema.index({ councilId: 1, status: 1 });

@@ -31,3 +31,12 @@ exports.markAllAsRead = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+exports.clearAllNotifications = async (req, res) => {
+  try {
+    await Notification.deleteMany({});
+    res.json({ message: 'All notifications have been cleared successfully.' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};

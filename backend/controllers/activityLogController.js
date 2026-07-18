@@ -11,3 +11,12 @@ exports.getActivityLogs = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+exports.clearAllLogs = async (req, res) => {
+  try {
+    await ActivityLog.deleteMany({});
+    res.json({ message: 'All activity logs have been cleared successfully.' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};

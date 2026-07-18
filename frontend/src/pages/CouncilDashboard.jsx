@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getMyCurrentSubmission, getNotifications, getSubmissionFileUrl, getSubmissions } from '../services/api';
+import { getMyCurrentSubmission, getSubmissionFileUrl, getSubmissions } from '../services/api';
 
 const LEGACY_ARRAY_COMPATIBILITY = {
   vpafFanCertificationPdfs: 'vpafFanCertificationPdf',
@@ -106,14 +106,12 @@ const formatDateTime = (value) => {
 function CouncilDashboard() {
   const [current, setCurrent] = useState(null);
   const [history, setHistory] = useState([]);
-  const [notifications, setNotifications] = useState([]);
 
   useEffect(() => {
-    Promise.all([getMyCurrentSubmission(), getSubmissions(), getNotifications()])
-      .then(([currentRes, historyRes, notificationsRes]) => {
+    Promise.all([getMyCurrentSubmission(), getSubmissions()])
+      .then(([currentRes, historyRes]) => {
         setCurrent(currentRes.data || historyRes.data.find((item) => item.status === 'Returned' || item.status === 'Pending') || null);
         setHistory(historyRes.data);
-        setNotifications(notificationsRes.data.slice(0, 5));
       })
       .catch(() => {});
   }, []);
@@ -166,7 +164,7 @@ function CouncilDashboard() {
       </div>
 
       <div className="row g-4">
-        <div className="col-lg-8">
+        <div className="col-12">
           <div className="card mb-4">
             <div className="card-header bg-primary"><h5 className="mb-0">Current Submission Overview</h5></div>
             <div className="card-body">
@@ -245,7 +243,7 @@ function CouncilDashboard() {
                                 <div className="fw-semibold" style={{ fontSize: '0.9rem' }}>{item.label}</div>
                                 <div className="small text-muted">{item.remarks || 'No document remarks.'}</div>
                               </div>
-                              <span className={`badge ${item.checked ? 'text-bg-success' : 'text-bg-secondary'}`}>{item.checked ? 'Checked' : 'Pending Review'}</span>
+                              <span className={`badge ${item.checked ? 'text-bg-success' : 'text-bg-secondary'}`}>{item.checked ? 'Approved' : 'Pending Review'}</span>
                             </div>
                           ))}
                         </div>
@@ -287,20 +285,6 @@ function CouncilDashboard() {
                   ))}
                 </tbody>
               </table>
-            </div>
-          </div>
-        </div>
-
-        <div className="col-lg-4">
-          <div className="card">
-            <div className="card-header bg-primary"><h5 className="mb-0">Notifications</h5></div>
-            <div className="card-body">
-              {notifications.length === 0 ? <div className="text-muted">No notifications.</div> : notifications.map((item) => (
-                <div key={item._id} className="border-bottom pb-2 mb-2">
-                  <div className="fw-semibold">{item.title}</div>
-                  <div className="small text-muted">{item.message}</div>
-                </div>
-              ))}
             </div>
           </div>
         </div>

@@ -14,6 +14,9 @@ function UserManagement({ user }) {
   const [editingId, setEditingId] = useState('');
   const [message, setMessage] = useState('');
 
+  const [modalOpen, setModalOpen] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
   const load = () => {
     Promise.all([getUsers(), getCouncils()])
       .then(([usersRes, councilsRes]) => {
@@ -50,14 +53,20 @@ function UserManagement({ user }) {
       if (form.password) payload.password = form.password;
       if (editingId) await updateUser(editingId, payload);
       else await createUser(payload);
-      setForm(emptyForm);
-      setCouncilInput('');
-      setEditingId('');
       setMessage('User saved successfully.');
       load();
+      closeModal();
     } catch (err) {
       setMessage(err.response?.data?.message || 'Failed to save user.');
     }
+  };
+
+  const openAddModal = () => {
+    setEditingId('');
+    setForm(emptyForm);
+    setCouncilInput('');
+    setMessage('');
+    setModalOpen(true);
   };
 
   const editUser = (user) => {
@@ -72,6 +81,16 @@ function UserManagement({ user }) {
       isActive: user.isActive !== false,
     });
     setCouncilInput(typeof user.councilId === 'object' ? getCouncilLabel(user.councilId) : '');
+    setMessage('');
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+    setEditingId('');
+    setForm(emptyForm);
+    setCouncilInput('');
+    setMessage('');
   };
 
   const removeUser = async (id) => {
@@ -89,93 +108,131 @@ function UserManagement({ user }) {
     if (!password) return;
     try {
       await resetUserPassword(id, password);
-      setMessage('Password reset successful.');
+      window.alert('Password reset successful.');
     } catch (err) {
-      setMessage(err.response?.data?.message || 'Failed to reset password.');
+      window.alert(err.response?.data?.message || 'Failed to reset password.');
     }
   };
 
   return (
-    <div className="row g-4">
-      {!readOnly ? (
-        <div className="col-lg-4">
-          <div className="card">
-            <div className="card-header bg-primary"><h5 className="mb-0">{editingId ? 'Edit User' : 'Create User'}</h5></div>
-            <div className="card-body">
-              {message ? <div className="alert alert-info py-2">{message}</div> : null}
-              <form onSubmit={save} className="d-grid gap-3">
-                <input className="form-control" placeholder="Full Name" value={form.fullname} onChange={(e) => setForm({ ...form, fullname: e.target.value })} required />
-                <input className="form-control" placeholder="Username" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required />
-                <input className="form-control" placeholder="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-                <input className="form-control" placeholder={editingId ? 'New Password (optional)' : 'Password'} type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required={!editingId} />
-                <select className="form-select" value={form.role} onChange={(e) => {
-                  const nextRole = e.target.value;
-                  setForm({ ...form, role: nextRole, councilId: nextRole === 'council' ? form.councilId : '' });
-                  if (nextRole !== 'council') setCouncilInput('');
-                }}>
-                  <option value="council">Administrative Council</option>
-                  <option value="board">USM Board</option>
-                  <option value="superadmin">Super Admin</option>
-                </select>
-                {form.role === 'council' ? (
-                  <>
-                    <input
-                      className="form-control"
-                      list="council-options"
-                      placeholder="Type Council"
-                      value={councilInput}
-                      onChange={(e) => syncCouncilSelection(e.target.value)}
-                      required
-                    />
-                    <datalist id="council-options">
-                      {councils.map((council) => <option key={council._id} value={getCouncilLabel(council)} />)}
-                    </datalist>
-                  </>
-                ) : null}
-                <select className="form-select" value={String(form.isActive)} onChange={(e) => setForm({ ...form, isActive: e.target.value === 'true' })}>
-                  <option value="true">Active</option>
-                  <option value="false">Inactive</option>
-                </select>
-                <div className="d-flex gap-2">
-                  <button className="btn btn-primary" type="submit">{editingId ? 'Update' : 'Create'}</button>
-                  {editingId ? <button className="btn btn-outline-secondary" type="button" onClick={() => { setEditingId(''); setForm(emptyForm); setCouncilInput(''); }}>Cancel</button> : null}
-                </div>
-              </form>
+    <div>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h2 className="page-section-title mb-0">System Users</h2>
+          <p className="page-section-sub mb-0">Manage system users, roles, and councils.</p>
+        </div>
+        {!readOnly ? (
+          <button className="btn btn-primary" onClick={openAddModal}>Add User</button>
+        ) : null}
+      </div>
+
+      <div className="card">
+        <div className="card-header bg-primary"><h5 className="mb-0">Users</h5></div>
+        <div className="card-body table-responsive">
+          {readOnly ? <div className="alert alert-info py-2">Board access is view-only on user management.</div> : null}
+          <table className="table table-striped align-middle mb-0">
+            <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Council</th><th>Status</th><th className="text-end">Actions</th></tr></thead>
+            <tbody>
+              {users.map((user) => (
+                <tr key={user._id}>
+                  <td>{user.fullname}</td>
+                  <td>{user.email || '—'}</td>
+                  <td>{user.role}</td>
+                  <td>{typeof user.councilId === 'object' ? user.councilId?.abbreviation || '—' : '—'}</td>
+                  <td>{user.isActive ? 'Active' : 'Inactive'}</td>
+                  <td className="text-end text-nowrap" style={{ width: '1%' }}>
+                    {!readOnly ? (
+                      <div className="d-flex gap-2 justify-content-end">
+                        <button className="btn btn-sm btn-outline-primary" onClick={() => editUser(user)}>Edit</button>
+                        <button className="btn btn-sm btn-outline-secondary" onClick={() => resetPasswordAction(user._id)}>Reset Password</button>
+                        <button className="btn btn-sm btn-outline-danger" onClick={() => removeUser(user._id)}>Delete</button>
+                      </div>
+                    ) : null}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {modalOpen ? (
+        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0, 0, 0, 0.55)', backdropFilter: 'blur(3px)', zIndex: 1060 }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header bg-primary text-white">
+                <h5 className="modal-title mb-0">{editingId ? 'Edit User' : 'Add User'}</h5>
+                <button type="button" className="btn-close btn-close-white" onClick={closeModal} />
+              </div>
+              <div className="modal-body">
+                {message ? <div className="alert alert-info py-2">{message}</div> : null}
+                <form onSubmit={save} className="d-grid gap-3">
+                  <div>
+                    <label className="form-label mb-1">Full Name *</label>
+                    <input className="form-control" placeholder="Full Name" value={form.fullname} onChange={(e) => setForm({ ...form, fullname: e.target.value })} required />
+                  </div>
+                  <div>
+                    <label className="form-label mb-1">Username *</label>
+                    <input className="form-control" placeholder="Username" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required />
+                  </div>
+                  <div>
+                    <label className="form-label mb-1">Email</label>
+                    <input className="form-control" placeholder="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="form-label mb-1">{editingId ? 'New Password (optional)' : 'Password *'}</label>
+                    <div className="input-group">
+                      <input className="form-control" placeholder={editingId ? 'Leave blank to keep current' : 'Password'} type={showPassword ? 'text' : 'password'} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required={!editingId} />
+                      <button className="btn btn-outline-secondary" type="button" onClick={() => setShowPassword(!showPassword)} title={showPassword ? 'Hide password' : 'Show password'}>
+                        <i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="form-label mb-1">Role *</label>
+                    <select className="form-select" value={form.role} onChange={(e) => {
+                      const nextRole = e.target.value;
+                      setForm({ ...form, role: nextRole, councilId: nextRole === 'council' ? form.councilId : '' });
+                      if (nextRole !== 'council') setCouncilInput('');
+                    }}>
+                      <option value="council">Administrative Council</option>
+                      <option value="board">USM Board</option>
+                      <option value="superadmin">Super Admin</option>
+                    </select>
+                  </div>
+                  {form.role === 'council' ? (
+                    <div>
+                      <label className="form-label mb-1">Council *</label>
+                      <input
+                        className="form-control"
+                        list="council-options"
+                        placeholder="Type Council"
+                        value={councilInput}
+                        onChange={(e) => syncCouncilSelection(e.target.value)}
+                        required
+                      />
+                      <datalist id="council-options">
+                        {councils.map((council) => <option key={council._id} value={getCouncilLabel(council)} />)}
+                      </datalist>
+                    </div>
+                  ) : null}
+                  <div>
+                    <label className="form-label mb-1">Status *</label>
+                    <select className="form-select" value={String(form.isActive)} onChange={(e) => setForm({ ...form, isActive: e.target.value === 'true' })}>
+                      <option value="true">Active</option>
+                      <option value="false">Inactive</option>
+                    </select>
+                  </div>
+                  <div className="d-flex justify-content-end gap-2 mt-2">
+                    <button className="btn btn-secondary" type="button" onClick={closeModal}>Cancel</button>
+                    <button className="btn btn-primary" type="submit">{editingId ? 'Update User' : 'Create User'}</button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
         </div>
       ) : null}
-      <div className={readOnly ? 'col-12' : 'col-lg-8'}>
-        <div className="card">
-          <div className="card-header bg-primary"><h5 className="mb-0">Users</h5></div>
-          <div className="card-body table-responsive">
-            {readOnly ? <div className="alert alert-info py-2">Board access is view-only on user management.</div> : null}
-            <table className="table table-striped align-middle mb-0">
-              <thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Council</th><th>Status</th><th></th></tr></thead>
-              <tbody>
-                {users.map((user) => (
-                  <tr key={user._id}>
-                    <td>{user.fullname}</td>
-                    <td>{user.username}</td>
-                    <td>{user.role}</td>
-                    <td>{typeof user.councilId === 'object' ? user.councilId?.abbreviation || '—' : '—'}</td>
-                    <td>{user.isActive ? 'Active' : 'Inactive'}</td>
-                    <td className="text-end">
-                      {!readOnly ? (
-                        <div className="d-flex gap-2 justify-content-end flex-wrap">
-                          <button className="btn btn-sm btn-outline-primary" onClick={() => editUser(user)}>Edit</button>
-                          <button className="btn btn-sm btn-outline-secondary" onClick={() => resetPasswordAction(user._id)}>Reset Password</button>
-                          <button className="btn btn-sm btn-outline-danger" onClick={() => removeUser(user._id)}>Delete</button>
-                        </div>
-                      ) : null}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

@@ -190,9 +190,10 @@ const upload = multer({
 exports.uploadMiddleware = upload.fields(FIELD_CONFIG);
 
 const actorFromUser = (user) => ({
-  userId: user?._id || null,
-  username: user?.username || '',
-  fullname: user?.fullname || '',
+  userId: user ? user._id : null,
+  username: user ? user.username : '',
+  fullname: user ? user.fullname : '',
+  date: new Date(),
 });
 
 const fileExists = (file) => Boolean(file && (file.filename || file.s3Key || file.data));
@@ -756,7 +757,7 @@ exports.replaceSubmission = async (req, res) => {
     submission.iasEndorsementCategory = String(req.body.iasEndorsementCategory || '').trim();
     submission.forInformationType = '';
     submission.files = mergedFiles;
-    submission.reviewChecklist = buildReviewChecklist(mergedFiles);
+    submission.reviewChecklist = normalizeReviewChecklist({}, mergedFiles, submission.reviewChecklist);
     submission.packetVersion = (submission.packetVersion || 1) + 1;
     submission.status = 'Pending';
     submission.remarks = '';
@@ -797,6 +798,12 @@ exports.approveSubmission = async (req, res) => {
     submission.status = 'Approved';
     submission.remarks = req.body.remarks || submission.remarks || 'Approved by USM Board';
     submission.approvedBy = actorFromUser(req.user);
+    
+    submission.auditTrail.push({
+      actor: submission.approvedBy,
+      action: 'Approved the submission',
+    });
+
     await submission.save();
 
     const councilUsers = await User.find({ role: 'council', councilId: submission.councilId, isActive: true }).select('_id');
@@ -817,16 +824,57 @@ exports.approveSubmission = async (req, res) => {
 
 exports.returnSubmission = async (req, res) => {
   try {
-    const { remarks, resubmissionDeadline } = req.body;
+    const { remarks, resubmissionDeadline, reviewChecklist: incomingReviewChecklist } = req.body;
     if (!remarks) return res.status(400).json({ message: 'Remarks are required when returning a submission' });
 
     const submission = await Submission.findById(req.params.id);
     if (!submission) return res.status(404).json({ message: 'Submission not found' });
 
+    if (incomingReviewChecklist) {
+      const reviewChecklist = normalizeReviewChecklist(incomingReviewChecklist || {}, submission.files || {}, submission.reviewChecklist || {});
+
+      const formatDocName = (key) => {
+        let name = key.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase());
+        return name.replace(/Pdfs?$/i, 'PDF').replace(/Word$/i, 'Word');
+      };
+
+      const actor = actorFromUser(req.user);
+      const oldChecklist = submission.reviewChecklist || {};
+
+      Object.keys(reviewChecklist).forEach((key) => {
+        const isArray = Array.isArray(reviewChecklist[key]);
+        if (isArray) {
+          reviewChecklist[key].forEach((item, index) => {
+            const oldItem = (oldChecklist[key] && oldChecklist[key][index]) || {};
+            if (item.checked && !oldItem.checked) {
+              submission.auditTrail.push({ actor, action: `Approved ${formatDocName(key)} #${index + 1}` });
+            } else if (!item.checked && oldItem.checked) {
+              submission.auditTrail.push({ actor, action: `Unapproved ${formatDocName(key)} #${index + 1}` });
+            }
+          });
+        } else {
+          const item = reviewChecklist[key];
+          const oldItem = oldChecklist[key] || {};
+          if (item.checked && !oldItem.checked) {
+            submission.auditTrail.push({ actor, action: `Approved ${formatDocName(key)}` });
+          } else if (!item.checked && oldItem.checked) {
+            submission.auditTrail.push({ actor, action: `Unapproved ${formatDocName(key)}` });
+          }
+        }
+      });
+      submission.reviewChecklist = reviewChecklist;
+    }
+
     submission.status = 'Returned';
     submission.remarks = remarks;
     submission.resubmissionDeadline = resubmissionDeadline || null;
     submission.returnedBy = actorFromUser(req.user);
+
+    submission.auditTrail.push({
+      actor: submission.returnedBy,
+      action: 'Returned the submission',
+    });
+
     await submission.save();
 
     const formattedDeadline = resubmissionDeadline
@@ -899,10 +947,46 @@ exports.updateSubmissionReview = async (req, res) => {
 
     const reviewChecklist = normalizeReviewChecklist(req.body.reviewChecklist || {}, submission.files || {}, submission.reviewChecklist || {});
 
+    const formatDocName = (key) => {
+      let name = key.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase());
+      return name.replace(/Pdfs?$/i, 'PDF').replace(/Word$/i, 'Word');
+    };
+
+    const actor = actorFromUser(req.user);
+    const oldChecklist = submission.reviewChecklist || {};
+
+    Object.keys(reviewChecklist).forEach((key) => {
+      const isArray = Array.isArray(reviewChecklist[key]);
+      if (isArray) {
+        reviewChecklist[key].forEach((item, index) => {
+          const oldItem = (oldChecklist[key] && oldChecklist[key][index]) || {};
+          if (item.checked && !oldItem.checked) {
+            submission.auditTrail.push({ actor, action: `Approved ${formatDocName(key)} #${index + 1}` });
+          } else if (!item.checked && oldItem.checked) {
+            submission.auditTrail.push({ actor, action: `Unapproved ${formatDocName(key)} #${index + 1}` });
+          }
+        });
+      } else {
+        const item = reviewChecklist[key];
+        const oldItem = oldChecklist[key] || {};
+        if (item.checked && !oldItem.checked) {
+          submission.auditTrail.push({ actor, action: `Approved ${formatDocName(key)}` });
+        } else if (!item.checked && oldItem.checked) {
+          submission.auditTrail.push({ actor, action: `Unapproved ${formatDocName(key)}` });
+        }
+      }
+    });
+
     submission.reviewChecklist = reviewChecklist;
     if (typeof req.body.remarks === 'string') {
       submission.remarks = req.body.remarks.trim();
     }
+
+    if (submission.status === 'Pending') {
+      submission.status = 'Under Review';
+    }
+
+    submission.reviewedBy = actorFromUser(req.user);
 
     await submission.save();
 

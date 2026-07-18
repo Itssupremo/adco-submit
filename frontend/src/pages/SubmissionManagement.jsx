@@ -221,10 +221,8 @@ const getSubmissionVersions = (submission) => {
 
 const pickCurrentSubmission = (items = []) => {
   if (!Array.isArray(items) || items.length === 0) return null;
-  return items.find((item) => item.status === 'Returned')
-    || items.find((item) => item.status === 'Pending')
-    || items.find((item) => item.status !== 'Archived')
-    || null;
+  // Since items are sorted by updatedAt descending, the first non-archived is the most recent active one.
+  return items.find((item) => item.status !== 'Archived') || null;
 };
 
 const createReviewEntry = (value = {}) => ({
@@ -327,6 +325,7 @@ function FileInput({
   currentFileNames = [],
   selectedFileNames = [],
   preserveOnEmpty = false,
+  disabled = false,
   onChange,
 }) {
   const inputRef = useRef(null);
@@ -336,23 +335,26 @@ function FileInput({
     : (multiple ? currentFileNames : (currentFileName ? [currentFileName] : []));
 
   const handleFiles = (fileList) => {
+    if (disabled) return;
     const files = Array.from(fileList || []);
     if (!files.length) return;
     onChange(files, multiple ? files : files[0]);
   };
 
   return (
-    <div className="submission-file-input">
-      <label className="form-label mb-1">{label}{required ? ' *' : ''}</label>
+    <div className={`submission-file-input ${disabled ? 'opacity-50' : ''}`} style={disabled ? { pointerEvents: 'none' } : {}}>
+      <label className="form-label mb-1">{label} {disabled ? <span className="badge bg-success ms-2">Approved</span> : (required ? ' *' : '')}</label>
       <div
         className={`agenda-dropzone${dragging ? ' dragging' : ''}${displayNames.length > 0 ? ' has-file' : ''}`}
-        onClick={() => inputRef.current?.click()}
+        onClick={() => { if (!disabled) inputRef.current?.click(); }}
         onDragOver={(e) => {
+          if (disabled) return;
           e.preventDefault();
           setDragging(true);
         }}
-        onDragLeave={() => setDragging(false)}
+        onDragLeave={() => { if (!disabled) setDragging(false); }}
         onDrop={(e) => {
+          if (disabled) return;
           e.preventDefault();
           setDragging(false);
           handleFiles(e.dataTransfer.files);
@@ -376,6 +378,7 @@ function FileInput({
           accept={accept}
           multiple={multiple}
           required={required && displayNames.length === 0}
+          disabled={disabled}
           onChange={(e) => handleFiles(e.target.files)}
         />
       </div>
@@ -396,9 +399,11 @@ function SubmissionManagement({ user, councilView = 'history' }) {
   const [message, setMessage] = useState('');
   const [current, setCurrent] = useState(null);
   const [editingSubmission, setEditingSubmission] = useState(null);
+  const [reviewModal, setReviewModal] = useState({ open: false, mode: 'view', submission: null, remarks: '', reviewChecklist: createEmptyReviewChecklist(), resubmissionDeadline: '', viewingVersion: null });
+  const [returnPromptModal, setReturnPromptModal] = useState({ open: false, submission: null, remarks: '', resubmissionDeadline: '', reviewChecklist: null });
   const [pdfModal, setPdfModal] = useState({ open: false, url: '', title: '' });
-  const [reviewModal, setReviewModal] = useState({ open: false, mode: 'view', submission: null, remarks: '', reviewChecklist: createEmptyReviewChecklist(), resubmissionDeadline: '' });
   const [submitState, setSubmitState] = useState({ loading: false, successOpen: false, successMessage: '' });
+  const [councilViewingVersion, setCouncilViewingVersion] = useState(null);
 
   const load = () => {
     getSubmissions(filters)
@@ -406,6 +411,7 @@ function SubmissionManagement({ user, councilView = 'history' }) {
         setSubmissions(res.data);
         if (user.role === 'council') {
           setCurrent(pickCurrentSubmission(res.data));
+          setCouncilViewingVersion(null);
         }
       })
       .catch(() => {});
@@ -425,8 +431,12 @@ function SubmissionManagement({ user, councilView = 'history' }) {
 
     const target = submissions.find((item) => item._id === editSubmissionId && item.status === 'Returned');
     if (target) {
-      setEditingSubmission(target);
-      setMessage('Editing returned submission. Upload only the files you want to replace.');
+      if (isOverdue(target.resubmissionDeadline)) {
+        setMessage('The resubmission deadline for this proposal has passed. It can no longer be edited.');
+      } else {
+        setEditingSubmission(target);
+        setMessage('Editing returned submission. Upload only the files you want to replace.');
+      }
       navigate(location.pathname, { replace: true, state: {} });
     }
   }, [user.role, councilView, location.state, location.pathname, navigate, submissions]);
@@ -517,13 +527,11 @@ function SubmissionManagement({ user, councilView = 'history' }) {
         });
       }
       if (action === 'return') {
-        const remarks = options.remarks || window.prompt('Enter remarks for the council:', submission.remarks || '');
-        if (!remarks) return;
-        const confirmMsg = options.resubmissionDeadline
-          ? `Return submission "${submission.documentTitle}" with a deadline of ${new Date(options.resubmissionDeadline).toLocaleString()}?`
-          : `Return submission "${submission.documentTitle}" without a deadline?`;
-        if (!window.confirm(confirmMsg)) return;
-        await returnSubmission(submission._id, remarks, options.resubmissionDeadline || null);
+        if (!options.remarks) {
+          setMessage('Remarks are required to return a submission.');
+          return;
+        }
+        await returnSubmission(submission._id, options.remarks, options.resubmissionDeadline || null, options.reviewChecklist || null);
       }
       if (action === 'archive') await archiveSubmission(submission._id);
       if (action === 'delete') {
@@ -539,33 +547,64 @@ function SubmissionManagement({ user, councilView = 'history' }) {
 
   const handleReviewAction = async (action) => {
     if (!reviewModal.submission) return;
+    if (action === 'return') {
+      setReturnPromptModal({
+        open: true,
+        submission: reviewModal.submission,
+        remarks: reviewModal.remarks || '',
+        resubmissionDeadline: reviewModal.resubmissionDeadline || '',
+        reviewChecklist: reviewModal.reviewChecklist,
+      });
+      closeReviewModal();
+      return;
+    }
     const options = action === 'approve'
       ? {
           remarks: reviewModal.remarks,
           reviewChecklist: reviewModal.reviewChecklist,
-        }
-      : action === 'return'
-      ? {
-          remarks: reviewModal.remarks,
-          resubmissionDeadline: reviewModal.resubmissionDeadline,
         }
       : {};
     await boardActions(action, reviewModal.submission, options);
     closeReviewModal();
   };
 
-  const renderVersionBadges = (submission) => (
-    <div className="d-flex gap-2 flex-wrap mt-2">
-      {getSubmissionVersions(submission).map((version) => (
-        <span key={`${submission._id}-v${version}`} className={`badge ${version === (submission.packetVersion || 1) ? 'text-bg-primary' : 'text-bg-light'}`}>
-          v{version}
-        </span>
-      ))}
-    </div>
-  );
+  const renderVersionBadges = (submission, currentVersion = null, onVersionClick = null) => {
+    const activeVersion = currentVersion || submission.packetVersion || 1;
+    const versions = getSubmissionVersions(submission);
+    
+    if (onVersionClick) {
+      return (
+        <select 
+          className="form-select form-select-sm ms-2" 
+          style={{ width: 'auto', display: 'inline-block' }}
+          value={activeVersion} 
+          onChange={(e) => onVersionClick(Number(e.target.value))}
+        >
+          {versions.map((version) => (
+            <option key={`${submission._id}-v${version}`} value={version}>
+              Version {version}
+            </option>
+          ))}
+        </select>
+      );
+    }
 
-  const openSubmissionFile = (submission, button) => {
-    const url = getSubmissionFileUrl(submission._id, button.key, { index: button.index });
+    return (
+      <div className="d-flex gap-2 flex-wrap mt-2">
+        {versions.map((version) => (
+          <span 
+            key={`${submission._id}-v${version}`} 
+            className={`badge ${version === activeVersion ? 'text-bg-primary' : 'text-bg-light'}`}
+          >
+            v{version}
+          </span>
+        ))}
+      </div>
+    );
+  };
+
+  const openSubmissionFile = (submission, button, version = null) => {
+    const url = getSubmissionFileUrl(submission._id, button.key, { index: button.index, version });
     if (isPdfFile(button.file)) {
       setPdfModal({ open: true, url, title: `${submission.documentTitle} - ${button.label}` });
       return;
@@ -624,7 +663,7 @@ function SubmissionManagement({ user, councilView = 'history' }) {
     }
   };
 
-  const renderDocumentButtons = (submission, justifyClass = 'justify-content-start') => {
+  const renderDocumentButtons = (submission, justifyClass = 'justify-content-start', version = null) => {
     const buttons = getSubmissionDocuments(submission).map((item) => ({
       label: item.label
         .replace('Executive Brief ', 'Brief ')
@@ -649,7 +688,7 @@ function SubmissionManagement({ user, councilView = 'history' }) {
             type="button"
             key={`${button.key}-${button.index ?? 'single'}`}
             className="btn btn-sm btn-outline-primary"
-            onClick={() => openSubmissionFile(submission, button)}
+            onClick={() => openSubmissionFile(submission, button, version)}
           >
             <i className={`bi ${isPdfFile(button.file) ? 'bi-eye' : 'bi-box-arrow-up-right'}`} />
             {button.label}
@@ -662,6 +701,13 @@ function SubmissionManagement({ user, councilView = 'history' }) {
   const canApproveReview = reviewModal.submission
     ? isReviewChecklistComplete(reviewModal.reviewChecklist, reviewModal.submission.files || {})
     : false;
+
+  const isFieldApproved = (fieldName) => {
+    if (!editingSubmission || !editingSubmission.reviewChecklist) return false;
+    const review = editingSubmission.reviewChecklist[fieldName];
+    if (Array.isArray(review)) return review.some((item) => item?.checked);
+    return review?.checked;
+  };
 
   return (
     <>
@@ -685,7 +731,7 @@ function SubmissionManagement({ user, councilView = 'history' }) {
               <div className="card">
                 <div className="card-header bg-primary"><h5 className="mb-0">Submit Proposal Packet</h5></div>
                 <div className="card-body">
-                  {current?.status === 'Returned' && !editingSubmission ? (
+                  {current?.status === 'Returned' && !editingSubmission && !isOverdue(current?.resubmissionDeadline) ? (
                     <div className="alert alert-warning d-flex justify-content-between align-items-center gap-3 flex-wrap">
                       <div>
                         <div className="fw-semibold">A returned submission can be revised and re-uploaded.</div>
@@ -741,10 +787,10 @@ function SubmissionManagement({ user, councilView = 'history' }) {
                         <h6 className="mb-3">Executive Brief</h6>
                         <div className="row g-3 submission-upload-row">
                           <div className="col-md-6">
-                            <FileInput label="Executive Brief PDF" accept="application/pdf" required={!editingSubmission && proposalRule.requiredSingle.includes('executiveBriefPdf')} helper="Upload the signed PDF copy." currentFileName={editingSubmission?.files?.executiveBriefPdf?.filename || ''} selectedFileNames={getSelectedFileNames('executiveBriefPdf')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(_, file) => setField('executiveBriefPdf', file || null)} />
+                            <FileInput label="Executive Brief PDF" accept="application/pdf" required={!editingSubmission && proposalRule.requiredSingle.includes('executiveBriefPdf')} helper="Upload the signed PDF copy." currentFileName={editingSubmission?.files?.executiveBriefPdf?.filename || ''} selectedFileNames={getSelectedFileNames('executiveBriefPdf')} disabled={isFieldApproved('executiveBriefPdf')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(_, file) => setField('executiveBriefPdf', file || null)} />
                           </div>
                           <div className="col-md-6">
-                            <FileInput label="Executive Brief Word" accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required={!editingSubmission && proposalRule.requiredSingle.includes('executiveBriefWord')} helper="Upload the editable Word copy." currentFileName={editingSubmission?.files?.executiveBriefWord?.filename || ''} selectedFileNames={getSelectedFileNames('executiveBriefWord')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(_, file) => setField('executiveBriefWord', file || null)} />
+                            <FileInput label="Executive Brief Word" accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required={!editingSubmission && proposalRule.requiredSingle.includes('executiveBriefWord')} helper="Upload the editable Word copy." currentFileName={editingSubmission?.files?.executiveBriefWord?.filename || ''} selectedFileNames={getSelectedFileNames('executiveBriefWord')} disabled={isFieldApproved('executiveBriefWord')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(_, file) => setField('executiveBriefWord', file || null)} />
                           </div>
                         </div>
                       </div>
@@ -755,10 +801,10 @@ function SubmissionManagement({ user, councilView = 'history' }) {
                         <h6 className="mb-3">Proposal</h6>
                         <div className="row g-3 submission-upload-row">
                           <div className="col-md-6">
-                            <FileInput label="Proposal PDF" accept="application/pdf" required={!editingSubmission && proposalRule.requiredSingle.includes('proposalPdf')} helper="Upload the final PDF proposal." currentFileName={editingSubmission?.files?.proposalPdf?.filename || ''} selectedFileNames={getSelectedFileNames('proposalPdf')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(_, file) => setField('proposalPdf', file || null)} />
+                            <FileInput label="Proposal PDF" accept="application/pdf" required={!editingSubmission && proposalRule.requiredSingle.includes('proposalPdf')} helper="Upload the final PDF proposal." currentFileName={editingSubmission?.files?.proposalPdf?.filename || ''} selectedFileNames={getSelectedFileNames('proposalPdf')} disabled={isFieldApproved('proposalPdf')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(_, file) => setField('proposalPdf', file || null)} />
                           </div>
                           <div className="col-md-6">
-                            <FileInput label="Proposal Word" accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required={!editingSubmission && proposalRule.requiredSingle.includes('proposalWord')} helper="Upload the editable Word proposal." currentFileName={editingSubmission?.files?.proposalWord?.filename || ''} selectedFileNames={getSelectedFileNames('proposalWord')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(_, file) => setField('proposalWord', file || null)} />
+                            <FileInput label="Proposal Word" accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required={!editingSubmission && proposalRule.requiredSingle.includes('proposalWord')} helper="Upload the editable Word proposal." currentFileName={editingSubmission?.files?.proposalWord?.filename || ''} selectedFileNames={getSelectedFileNames('proposalWord')} disabled={isFieldApproved('proposalWord')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(_, file) => setField('proposalWord', file || null)} />
                           </div>
                         </div>
                       </div>
@@ -770,12 +816,12 @@ function SubmissionManagement({ user, councilView = 'history' }) {
                         <div className="row g-3 submission-upload-row">
                           {proposalRule.visibleSingle.includes('summaryMatrixPdf') ? (
                             <div className="col-md-6">
-                              <FileInput label="Summary Matrix" accept="application/pdf" required={!editingSubmission && proposalRule.requiredSingle.includes('summaryMatrixPdf')} currentFileName={editingSubmission?.files?.summaryMatrixPdf?.filename || ''} selectedFileNames={getSelectedFileNames('summaryMatrixPdf')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(_, file) => setField('summaryMatrixPdf', file || null)} />
+                              <FileInput label="Summary Matrix" accept="application/pdf" required={!editingSubmission && proposalRule.requiredSingle.includes('summaryMatrixPdf')} currentFileName={editingSubmission?.files?.summaryMatrixPdf?.filename || ''} selectedFileNames={getSelectedFileNames('summaryMatrixPdf')} disabled={isFieldApproved('summaryMatrixPdf')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(_, file) => setField('summaryMatrixPdf', file || null)} />
                             </div>
                           ) : null}
                           {proposalRule.visibleSingle.includes('copyOfMoaMouPdf') ? (
                             <div className="col-md-6">
-                              <FileInput label="Copy of MOA/MOU" accept="application/pdf" required={!editingSubmission && proposalRule.requiredSingle.includes('copyOfMoaMouPdf')} currentFileName={editingSubmission?.files?.copyOfMoaMouPdf?.filename || ''} selectedFileNames={getSelectedFileNames('copyOfMoaMouPdf')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(_, file) => setField('copyOfMoaMouPdf', file || null)} />
+                              <FileInput label="Copy of MOA/MOU" accept="application/pdf" required={!editingSubmission && proposalRule.requiredSingle.includes('copyOfMoaMouPdf')} currentFileName={editingSubmission?.files?.copyOfMoaMouPdf?.filename || ''} selectedFileNames={getSelectedFileNames('copyOfMoaMouPdf')} disabled={isFieldApproved('copyOfMoaMouPdf')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(_, file) => setField('copyOfMoaMouPdf', file || null)} />
                             </div>
                           ) : null}
                         </div>
@@ -788,12 +834,12 @@ function SubmissionManagement({ user, councilView = 'history' }) {
                         <div className="row g-3 submission-upload-row">
                           {proposalRule.visibleSingle.includes('copyOfUsufructPdf') ? (
                             <div className="col-md-6">
-                              <FileInput label="Copy of Usufruct" accept="application/pdf" required={!editingSubmission && proposalRule.requiredSingle.includes('copyOfUsufructPdf')} currentFileName={editingSubmission?.files?.copyOfUsufructPdf?.filename || ''} selectedFileNames={getSelectedFileNames('copyOfUsufructPdf')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(_, file) => setField('copyOfUsufructPdf', file || null)} />
+                              <FileInput label="Copy of Usufruct" accept="application/pdf" required={!editingSubmission && proposalRule.requiredSingle.includes('copyOfUsufructPdf')} currentFileName={editingSubmission?.files?.copyOfUsufructPdf?.filename || ''} selectedFileNames={getSelectedFileNames('copyOfUsufructPdf')} disabled={isFieldApproved('copyOfUsufructPdf')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(_, file) => setField('copyOfUsufructPdf', file || null)} />
                             </div>
                           ) : null}
                           {proposalRule.visibleSingle.includes('copyOfDeedOfDonationPdf') ? (
                             <div className="col-md-6">
-                              <FileInput label="Copy of Deed of Donation" accept="application/pdf" required={!editingSubmission && proposalRule.requiredSingle.includes('copyOfDeedOfDonationPdf')} currentFileName={editingSubmission?.files?.copyOfDeedOfDonationPdf?.filename || ''} selectedFileNames={getSelectedFileNames('copyOfDeedOfDonationPdf')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(_, file) => setField('copyOfDeedOfDonationPdf', file || null)} />
+                              <FileInput label="Copy of Deed of Donation" accept="application/pdf" required={!editingSubmission && proposalRule.requiredSingle.includes('copyOfDeedOfDonationPdf')} currentFileName={editingSubmission?.files?.copyOfDeedOfDonationPdf?.filename || ''} selectedFileNames={getSelectedFileNames('copyOfDeedOfDonationPdf')} disabled={isFieldApproved('copyOfDeedOfDonationPdf')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(_, file) => setField('copyOfDeedOfDonationPdf', file || null)} />
                             </div>
                           ) : null}
                         </div>
@@ -805,7 +851,7 @@ function SubmissionManagement({ user, councilView = 'history' }) {
                         <h6 className="mb-3">Supporting Documents</h6>
                         <div className="row g-3 submission-upload-row">
                           <div className="col-md-6">
-                            <FileInput label="Supporting Documents" accept="application/pdf" required={!editingSubmission && proposalRule.requiredMulti.includes('supportingDocuments')} multiple helper="Upload related PDF attachments. You can select multiple files." currentFileNames={getArrayFiles(editingSubmission?.files || {}, 'supportingDocuments').map((file) => file.filename)} selectedFileNames={getSelectedFileNames('supportingDocuments')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(files) => setField('supportingDocuments', files)} />
+                            <FileInput label="Supporting Documents" accept="application/pdf" required={!editingSubmission && proposalRule.requiredMulti.includes('supportingDocuments')} multiple helper="Upload related PDF attachments. You can select multiple files." currentFileNames={getArrayFiles(editingSubmission?.files || {}, 'supportingDocuments').map((file) => file.filename)} selectedFileNames={getSelectedFileNames('supportingDocuments')} disabled={isFieldApproved('supportingDocuments')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(files) => setField('supportingDocuments', files)} />
                           </div>
                         </div>
                       </div>
@@ -817,37 +863,37 @@ function SubmissionManagement({ user, councilView = 'history' }) {
                         <div className="row g-3 submission-upload-row">
                           {proposalRule.visibleSingle.includes('legalEndorsementPdf') ? (
                             <div className="col-md-6">
-                              <FileInput label="Legal Endorsement" accept="application/pdf" required={!editingSubmission && proposalRule.requiredSingle.includes('legalEndorsementPdf')} currentFileName={editingSubmission?.files?.legalEndorsementPdf?.filename || ''} selectedFileNames={getSelectedFileNames('legalEndorsementPdf')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(_, file) => setField('legalEndorsementPdf', file || null)} />
+                              <FileInput label="Legal Endorsement" accept="application/pdf" required={!editingSubmission && proposalRule.requiredSingle.includes('legalEndorsementPdf')} currentFileName={editingSubmission?.files?.legalEndorsementPdf?.filename || ''} selectedFileNames={getSelectedFileNames('legalEndorsementPdf')} disabled={isFieldApproved('legalEndorsementPdf')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(_, file) => setField('legalEndorsementPdf', file || null)} />
                             </div>
                           ) : null}
                           {proposalRule.visibleMulti.includes('vpafFanCertificationPdfs') ? (
                             <div className="col-md-6">
-                              <FileInput label="VPAF / FMS Certification" accept="application/pdf" required={!editingSubmission && proposalRule.requiredMulti.includes('vpafFanCertificationPdfs')} multiple currentFileNames={getArrayFiles(editingSubmission?.files || {}, 'vpafFanCertificationPdfs').map((file) => file.filename)} selectedFileNames={getSelectedFileNames('vpafFanCertificationPdfs')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(files) => setField('vpafFanCertificationPdfs', files)} />
+                              <FileInput label="VPAF / FMS Certification" accept="application/pdf" required={!editingSubmission && proposalRule.requiredMulti.includes('vpafFanCertificationPdfs')} multiple helper="Upload related PDF attachments. You can select multiple files." currentFileNames={getArrayFiles(editingSubmission?.files || {}, 'vpafFanCertificationPdfs').map((file) => file.filename)} selectedFileNames={getSelectedFileNames('vpafFanCertificationPdfs')} disabled={isFieldApproved('vpafFanCertificationPdfs')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(files) => setField('vpafFanCertificationPdfs', files)} />
                             </div>
                           ) : null}
                           {proposalRule.visibleMulti.includes('vpaaAdministrativeCouncilPdfs') ? (
                             <div className="col-md-6">
-                              <FileInput label="VPAA / Academic Council" accept="application/pdf" required={!editingSubmission && proposalRule.requiredMulti.includes('vpaaAdministrativeCouncilPdfs')} multiple currentFileNames={getArrayFiles(editingSubmission?.files || {}, 'vpaaAdministrativeCouncilPdfs').map((file) => file.filename)} selectedFileNames={getSelectedFileNames('vpaaAdministrativeCouncilPdfs')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(files) => setField('vpaaAdministrativeCouncilPdfs', files)} />
+                              <FileInput label="VPAA / Academic Council" accept="application/pdf" required={!editingSubmission && proposalRule.requiredMulti.includes('vpaaAdministrativeCouncilPdfs')} multiple helper="Upload related PDF attachments. You can select multiple files." currentFileNames={getArrayFiles(editingSubmission?.files || {}, 'vpaaAdministrativeCouncilPdfs').map((file) => file.filename)} selectedFileNames={getSelectedFileNames('vpaaAdministrativeCouncilPdfs')} disabled={isFieldApproved('vpaaAdministrativeCouncilPdfs')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(files) => setField('vpaaAdministrativeCouncilPdfs', files)} />
                             </div>
                           ) : null}
                           {proposalRule.visibleMulti.includes('vprgesProductionCouncilPdfs') ? (
                             <div className="col-md-6">
-                              <FileInput label="VPRGES / Production Council" accept="application/pdf" required={!editingSubmission && proposalRule.requiredMulti.includes('vprgesProductionCouncilPdfs')} multiple currentFileNames={getArrayFiles(editingSubmission?.files || {}, 'vprgesProductionCouncilPdfs').map((file) => file.filename)} selectedFileNames={getSelectedFileNames('vprgesProductionCouncilPdfs')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(files) => setField('vprgesProductionCouncilPdfs', files)} />
+                              <FileInput label="VPRGES / Production Council" accept="application/pdf" required={!editingSubmission && proposalRule.requiredMulti.includes('vprgesProductionCouncilPdfs')} multiple helper="Upload related PDF attachments. You can select multiple files." currentFileNames={getArrayFiles(editingSubmission?.files || {}, 'vprgesProductionCouncilPdfs').map((file) => file.filename)} selectedFileNames={getSelectedFileNames('vprgesProductionCouncilPdfs')} disabled={isFieldApproved('vprgesProductionCouncilPdfs')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(files) => setField('vprgesProductionCouncilPdfs', files)} />
                             </div>
                           ) : null}
                           {proposalRule.visibleMulti.includes('vprdeUrdecPdfs') ? (
                             <div className="col-md-6">
-                              <FileInput label="VPRDE / URDEC" accept="application/pdf" required={!editingSubmission && proposalRule.requiredMulti.includes('vprdeUrdecPdfs')} multiple currentFileNames={getArrayFiles(editingSubmission?.files || {}, 'vprdeUrdecPdfs').map((file) => file.filename)} selectedFileNames={getSelectedFileNames('vprdeUrdecPdfs')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(files) => setField('vprdeUrdecPdfs', files)} />
+                              <FileInput label="VPRDE / URDEC" accept="application/pdf" required={!editingSubmission && proposalRule.requiredMulti.includes('vprdeUrdecPdfs')} multiple helper="Upload related PDF attachments. You can select multiple files." currentFileNames={getArrayFiles(editingSubmission?.files || {}, 'vprdeUrdecPdfs').map((file) => file.filename)} selectedFileNames={getSelectedFileNames('vprdeUrdecPdfs')} disabled={isFieldApproved('vprdeUrdecPdfs')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(files) => setField('vprdeUrdecPdfs', files)} />
                             </div>
                           ) : null}
                           {proposalRule.visibleMulti.includes('officeOfPresidentPdfs') ? (
                             <div className="col-md-6">
-                              <FileInput label="Office of the President" accept="application/pdf" required={!editingSubmission && proposalRule.requiredMulti.includes('officeOfPresidentPdfs')} multiple currentFileNames={getArrayFiles(editingSubmission?.files || {}, 'officeOfPresidentPdfs').map((file) => file.filename)} selectedFileNames={getSelectedFileNames('officeOfPresidentPdfs')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(files) => setField('officeOfPresidentPdfs', files)} />
+                              <FileInput label="Office of the President (Optional)" accept="application/pdf" required={!editingSubmission && proposalRule.requiredMulti.includes('officeOfPresidentPdfs')} multiple currentFileNames={getArrayFiles(editingSubmission?.files || {}, 'officeOfPresidentPdfs').map((file) => file.filename)} selectedFileNames={getSelectedFileNames('officeOfPresidentPdfs')} disabled={isFieldApproved('officeOfPresidentPdfs')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(files) => setField('officeOfPresidentPdfs', files)} />
                             </div>
                           ) : null}
                           {proposalRule.visibleMulti.includes('iasEndorsementPdfs') ? (
                             <div className="col-md-6">
-                              <FileInput label="IAS Endorsement" accept="application/pdf" required={!editingSubmission && proposalRule.requiredMulti.includes('iasEndorsementPdfs')} multiple helper="Upload the IAS endorsement PDF files for the selected category." currentFileNames={getArrayFiles(editingSubmission?.files || {}, 'iasEndorsementPdfs').map((file) => file.filename)} selectedFileNames={getSelectedFileNames('iasEndorsementPdfs')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(files) => setField('iasEndorsementPdfs', files)} />
+                              <FileInput label="IAS Endorsement" accept="application/pdf" required={!editingSubmission && proposalRule.requiredMulti.includes('iasEndorsementPdfs')} multiple helper="Upload the IAS endorsement PDF files. You can select multiple files." currentFileNames={getArrayFiles(editingSubmission?.files || {}, 'iasEndorsementPdfs').map((file) => file.filename)} selectedFileNames={getSelectedFileNames('iasEndorsementPdfs')} disabled={isFieldApproved('iasEndorsementPdfs')} preserveOnEmpty={Boolean(editingSubmission)} onChange={(files) => setField('iasEndorsementPdfs', files)} />
                             </div>
                           ) : null}
                         </div>
@@ -897,7 +943,8 @@ function SubmissionManagement({ user, councilView = 'history' }) {
                                 current.status === 'Approved' ? 'bg-success' :
                                 current.status === 'Returned' 
                                   ? (isOverdue(current.resubmissionDeadline) ? 'bg-danger text-white' : 'bg-warning text-dark') :
-                                current.status === 'Archived' ? 'bg-secondary' : 'bg-info text-dark'
+                                current.status === 'Archived' ? 'bg-secondary' :
+                                current.status === 'Under Review' ? 'bg-primary text-white' : 'bg-info text-dark'
                               }`}>
                                 {current.status === 'Returned' && isOverdue(current.resubmissionDeadline) ? 'Failed to Submit' : current.status}
                               </span>
@@ -922,21 +969,34 @@ function SubmissionManagement({ user, councilView = 'history' }) {
                             </div>
                           ) : null}
 
-                          <div className="row g-3">
-                            <div className="col-md-6">
-                              <strong className="d-block mb-1 text-secondary" style={{ fontSize: '0.85rem' }}>Upload Versions</strong>
-                              {renderVersionBadges(current)}
-                            </div>
-                            <div className="col-md-6">
-                              <strong className="d-block mb-1 text-secondary" style={{ fontSize: '0.85rem' }}>Remarks</strong>
-                              <div className="text-muted small border rounded p-2 bg-light">{current.remarks || 'No remarks'}</div>
-                            </div>
-                          </div>
+                          {(() => {
+                            let displayCurrent = current;
+                            if (councilViewingVersion && councilViewingVersion !== (current.packetVersion || 1)) {
+                              const snapshot = current.packetHistory?.find((h) => h.version === councilViewingVersion);
+                              if (snapshot) {
+                                displayCurrent = { ...current, files: snapshot.files };
+                              }
+                            }
+                            return (
+                              <>
+                                <div className="row g-3">
+                                  <div className="col-md-6">
+                                    <strong className="d-block mb-1 text-secondary" style={{ fontSize: '0.85rem' }}>Upload Versions</strong>
+                                    {renderVersionBadges(current, councilViewingVersion, (v) => setCouncilViewingVersion(v))}
+                                  </div>
+                                  <div className="col-md-6">
+                                    <strong className="d-block mb-1 text-secondary" style={{ fontSize: '0.85rem' }}>Remarks</strong>
+                                    <div className="text-muted small border rounded p-2 bg-light">{current.remarks || 'No remarks'}</div>
+                                  </div>
+                                </div>
 
-                          <div className="border-top pt-3">
-                            <strong className="d-block mb-2 text-secondary" style={{ fontSize: '0.85rem' }}>Uploaded Files</strong>
-                            <div>{renderDocumentButtons(current, 'justify-content-start')}</div>
-                          </div>
+                                <div className="border-top pt-3">
+                                  <strong className="d-block mb-2 text-secondary" style={{ fontSize: '0.85rem' }}>Uploaded Files</strong>
+                                  <div>{renderDocumentButtons(displayCurrent, 'justify-content-start', councilViewingVersion)}</div>
+                                </div>
+                              </>
+                            );
+                          })()}
 
                           {current.status === 'Returned' && !isOverdue(current.resubmissionDeadline) ? (
                             <div className="pt-2">
@@ -954,7 +1014,7 @@ function SubmissionManagement({ user, councilView = 'history' }) {
                                       <div className="fw-semibold" style={{ fontSize: '0.9rem' }}>{item.label}</div>
                                       <div className="small text-muted">{item.remarks || 'No document remarks.'}</div>
                                     </div>
-                                    <span className={`badge ${item.checked ? 'text-bg-success' : 'text-bg-secondary'}`}>{item.checked ? 'Checked' : 'Pending Review'}</span>
+                                    <span className={`badge ${item.checked ? 'text-bg-success' : 'text-bg-secondary'}`}>{item.checked ? 'Approved' : 'Pending Review'}</span>
                                   </div>
                                 ))}
                                 <div className="mt-1">
@@ -989,7 +1049,8 @@ function SubmissionManagement({ user, councilView = 'history' }) {
                                 submission.status === 'Approved' ? 'bg-success' :
                                 submission.status === 'Returned' 
                                   ? (isOverdue(submission.resubmissionDeadline) ? 'bg-danger text-white' : 'bg-warning text-dark') :
-                                submission.status === 'Archived' ? 'bg-secondary' : 'bg-info text-dark'
+                                submission.status === 'Archived' ? 'bg-secondary' : 
+                                submission.status === 'Under Review' ? 'bg-primary text-white' : 'bg-info text-dark'
                               }`}>
                                 {submission.status === 'Returned' && isOverdue(submission.resubmissionDeadline) ? 'Failed to Submit' : submission.status}
                               </span>
@@ -1031,6 +1092,7 @@ function SubmissionManagement({ user, councilView = 'history' }) {
               <select className="form-select form-select-sm" style={{ maxWidth: 180 }} value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}>
                 <option value="">All Statuses</option>
                 <option value="Pending">Pending</option>
+                <option value="Under Review">Under Review</option>
                 <option value="Returned">Returned</option>
                 <option value="Approved">Approved</option>
                 <option value="Archived">Archived</option>
@@ -1050,7 +1112,8 @@ function SubmissionManagement({ user, councilView = 'history' }) {
                           submission.status === 'Approved' ? 'bg-success' :
                           submission.status === 'Returned' 
                             ? (isOverdue(submission.resubmissionDeadline) ? 'bg-danger text-white' : 'bg-warning text-dark') :
-                          submission.status === 'Archived' ? 'bg-secondary' : 'bg-info text-dark'
+                          submission.status === 'Archived' ? 'bg-secondary' : 
+                          submission.status === 'Under Review' ? 'bg-primary text-white' : 'bg-info text-dark'
                         }`}>
                           {submission.status === 'Returned' && isOverdue(submission.resubmissionDeadline) ? 'Failed to Submit' : submission.status}
                         </span>
@@ -1087,7 +1150,10 @@ function SubmissionManagement({ user, councilView = 'history' }) {
             <div className="modal-content">
               <div className="modal-header bg-primary text-white">
                 <div>
-                  <h5 className="modal-title mb-1">{reviewModal.mode === 'edit' ? 'Edit Submission Review' : 'View Submission'}</h5>
+                  <h5 className="modal-title mb-1 d-flex align-items-center gap-2">
+                    {reviewModal.mode === 'edit' ? 'Edit Submission Review' : 'View Submission'}
+                    {renderVersionBadges(reviewModal.submission, reviewModal.viewingVersion, (v) => setReviewModal((prev) => ({ ...prev, viewingVersion: v })))}
+                  </h5>
                   <div className="small opacity-75">{reviewModal.submission.documentTitle}</div>
                 </div>
                 <button type="button" className="btn-close btn-close-white" onClick={closeReviewModal} />
@@ -1125,26 +1191,35 @@ function SubmissionManagement({ user, councilView = 'history' }) {
                       <tr>
                         <th>Document</th>
                         <th style={{ width: 160 }}>File</th>
-                        <th style={{ width: 120 }}>Checked</th>
+                        <th style={{ width: 120 }}>Approved</th>
                         <th>Remarks</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {getSubmissionDocuments(reviewModal.submission).map((doc) => {
-                        const reviewItem = getReviewEntryValue(reviewModal.reviewChecklist, doc.key, doc.index);
-                        const readOnly = reviewModal.mode !== 'edit';
+                      {(() => {
+                        let displaySubmission = reviewModal.submission;
+                        const isOldVersion = reviewModal.viewingVersion && reviewModal.viewingVersion !== (reviewModal.submission.packetVersion || 1);
+                        if (isOldVersion) {
+                          const snapshot = reviewModal.submission.packetHistory?.find((h) => h.version === reviewModal.viewingVersion);
+                          if (snapshot) {
+                            displaySubmission = { ...reviewModal.submission, files: snapshot.files };
+                          }
+                        }
+                        return getSubmissionDocuments(displaySubmission).map((doc) => {
+                          const reviewItem = getReviewEntryValue(reviewModal.reviewChecklist, doc.key, doc.index);
+                          const readOnly = reviewModal.mode !== 'edit' || isOldVersion;
 
-                        return (
-                          <tr key={`${doc.key}-${doc.index ?? 'single'}`}>
-                            <td>{doc.label}</td>
-                            <td>
-                              <div className="d-flex gap-2 flex-wrap">
-                                <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => openSubmissionFile(reviewModal.submission, doc)}>
-                                  <i className={`bi ${isPdfFile(doc.file) ? 'bi-eye' : 'bi-box-arrow-up-right'}`} />
-                                  {isPdfFile(doc.file) ? 'View' : 'Open'}
-                                </button>
-                              </div>
-                            </td>
+                          return (
+                            <tr key={`${doc.key}-${doc.index ?? 'single'}`}>
+                              <td>{doc.label}</td>
+                              <td>
+                                <div className="d-flex gap-2 flex-wrap">
+                                  <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => openSubmissionFile(reviewModal.submission, doc, reviewModal.viewingVersion)}>
+                                    <i className={`bi ${isPdfFile(doc.file) ? 'bi-eye' : 'bi-box-arrow-up-right'}`} />
+                                    {isPdfFile(doc.file) ? 'View' : 'Open'}
+                                  </button>
+                                </div>
+                              </td>
                             <td>
                               <div className="form-check">
                                 <input
@@ -1168,7 +1243,8 @@ function SubmissionManagement({ user, councilView = 'history' }) {
                             </td>
                           </tr>
                         );
-                      })}
+                      });
+                    })()}
                     </tbody>
                   </table>
                 </div>
@@ -1199,6 +1275,54 @@ function SubmissionManagement({ user, councilView = 'history' }) {
                     </div>
                   </div>
                 </div>
+
+                {(() => {
+                  const current = reviewModal.submission;
+                  if (!current) return null;
+                  
+                  const auditTrail = current.auditTrail || [];
+                  const legacyReviewedBy = current.reviewedBy?.fullname;
+                  const legacyApprovedBy = current.approvedBy?.fullname;
+                  const legacyReturnedBy = current.returnedBy?.fullname;
+                  
+                  if (auditTrail.length === 0 && !legacyReviewedBy && !legacyApprovedBy && !legacyReturnedBy) return null;
+
+                  return (
+                    <div className="mt-4 p-3 bg-light rounded border">
+                      <h6 className="fw-bold mb-3 text-secondary text-uppercase" style={{ fontSize: '0.75rem', letterSpacing: '0.5px' }}>
+                        Activity Tracker
+                      </h6>
+                      <ul className="list-unstyled mb-0" style={{ fontSize: '0.85rem', maxHeight: '200px', overflowY: 'auto' }}>
+                        {[...auditTrail].reverse().map((event, idx) => (
+                          <li key={idx} className="mb-2 border-bottom pb-2">
+                            <i className="bi bi-clock-history text-muted me-2"></i>
+                            <span className="fw-semibold text-dark">{event.actor?.fullname || 'Unknown'}</span>{' '}
+                            <span className="text-muted">{event.action.toLowerCase().replace(/unchecked/g, 'unapproved').replace(/checked/g, 'approved')}</span>
+                            {event.date ? <span className="text-muted ms-1" style={{ fontSize: '0.75rem' }}>on {new Date(event.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span> : ''}
+                          </li>
+                        ))}
+                        {auditTrail.length === 0 && legacyReviewedBy && (
+                          <li className="mb-2">
+                            <i className="bi bi-person-check text-primary me-2"></i>
+                            Reviewed by <span className="fw-semibold text-dark">{legacyReviewedBy}</span> {current.reviewedBy?.date ? <span className="text-muted ms-1">on {new Date(current.reviewedBy.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span> : ''}
+                          </li>
+                        )}
+                        {auditTrail.length === 0 && legacyApprovedBy && (
+                          <li className="mb-2">
+                            <i className="bi bi-patch-check-fill text-success me-2"></i>
+                            Approved by <span className="fw-semibold text-dark">{legacyApprovedBy}</span> {current.approvedBy?.date ? <span className="text-muted ms-1">on {new Date(current.approvedBy.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span> : ''}
+                          </li>
+                        )}
+                        {auditTrail.length === 0 && legacyReturnedBy && (
+                          <li className="mb-0">
+                            <i className="bi bi-arrow-counterclockwise text-danger me-2"></i>
+                            Returned by <span className="fw-semibold text-dark">{legacyReturnedBy}</span> {current.returnedBy?.date ? <span className="text-muted ms-1">on {new Date(current.returnedBy.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span> : ''}
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+                  );
+                })()}
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={closeReviewModal}>Close</button>
@@ -1245,6 +1369,68 @@ function SubmissionManagement({ user, councilView = 'history' }) {
           </div>
         </div>
       ) : null}
+      {returnPromptModal.open && returnPromptModal.submission && (
+        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0, 0, 0, 0.55)', backdropFilter: 'blur(3px)', zIndex: 1065 }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content border-0 shadow-lg">
+              <div className="modal-header bg-warning text-dark border-0">
+                <h5 className="modal-title d-flex align-items-center gap-2">
+                  <i className="bi bi-arrow-return-left"></i>
+                  Return Submission
+                </h5>
+                <button type="button" className="btn-close" onClick={() => setReturnPromptModal({ open: false, submission: null, remarks: '', resubmissionDeadline: '', reviewChecklist: null })} />
+              </div>
+              <div className="modal-body p-4">
+                <p className="mb-4 text-muted">
+                  You are returning <strong>{returnPromptModal.submission.documentTitle}</strong>. 
+                  Approved documents will be locked, and the council will only be able to re-upload the unapproved ones.
+                </p>
+                <div className="mb-3">
+                  <label className="form-label fw-semibold">Remarks for Council <span className="text-danger">*</span></label>
+                  <textarea
+                    className="form-control"
+                    rows="4"
+                    value={returnPromptModal.remarks}
+                    onChange={(e) => setReturnPromptModal({ ...returnPromptModal, remarks: e.target.value })}
+                    placeholder="Enter the reason for returning this submission..."
+                    required
+                  ></textarea>
+                </div>
+                <div className="mb-3">
+                  <label className="form-label fw-semibold">Resubmission Deadline (Optional)</label>
+                  <input
+                    type="datetime-local"
+                    className="form-control"
+                    value={returnPromptModal.resubmissionDeadline}
+                    onChange={(e) => setReturnPromptModal({ ...returnPromptModal, resubmissionDeadline: e.target.value })}
+                  />
+                  <div className="form-text text-muted">
+                    Specify the date and time by which the council must resubmit their revisions. Leave blank if no deadline is required.
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer bg-light border-0">
+                <button type="button" className="btn btn-outline-secondary" onClick={() => setReturnPromptModal({ open: false, submission: null, remarks: '', resubmissionDeadline: '', reviewChecklist: null })}>Cancel</button>
+                <button 
+                  type="button" 
+                  className="btn btn-warning" 
+                  disabled={!returnPromptModal.remarks.trim()}
+                  onClick={async () => {
+                    await boardActions('return', returnPromptModal.submission, {
+                      remarks: returnPromptModal.remarks,
+                      resubmissionDeadline: returnPromptModal.resubmissionDeadline,
+                      reviewChecklist: returnPromptModal.reviewChecklist
+                    });
+                    setReturnPromptModal({ open: false, submission: null, remarks: '', resubmissionDeadline: '', reviewChecklist: null });
+                  }}
+                >
+                  Confirm Return
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {pdfModal.open ? <PdfViewer url={pdfModal.url} title={pdfModal.title} onClose={closePdfModal} /> : null}
     </>
   );
